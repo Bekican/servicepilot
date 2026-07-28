@@ -9,15 +9,19 @@ public sealed class OrganizationTests
     {
         Guid id = Guid.NewGuid();
 
+        DateTimeOffset createdAtUtc =
+            new(2026, 7, 28, 12, 0, 0, TimeSpan.Zero);
+
         Organization organization = new(
             id,
             "Acme Technical Service",
-            "ACME-TECHNICAL-SERVICE");
+            "ACME-TECHNICAL-SERVICE",
+            createdAtUtc);
 
+        Assert.Equal(createdAtUtc, organization.CreatedAtUtc);
         Assert.Equal(id, organization.Id);
         Assert.Equal("Acme Technical Service", organization.Name);
         Assert.Equal("acme-technical-service", organization.Slug);
-        Assert.NotEqual(default, organization.CreatedAtUtc);
     }
 
     [Theory]
@@ -29,7 +33,8 @@ public sealed class OrganizationTests
         Action action = () => new Organization(
             Guid.NewGuid(),
             name,
-            "acme");
+            "acme",
+            DateTimeOffset.UtcNow);
 
         ArgumentException exception =
             Assert.Throws<ArgumentException>(action);
@@ -45,7 +50,8 @@ public sealed class OrganizationTests
         Action action = () => new Organization(
             Guid.NewGuid(),
             "Acme",
-            slug);
+            slug,
+            DateTimeOffset.UtcNow);
 
         ArgumentException exception =
             Assert.Throws<ArgumentException>(action);
@@ -59,7 +65,8 @@ public sealed class OrganizationTests
         Action action = () => new Organization(
             Guid.Empty,
             "Acme",
-            "acme");
+            "acme",
+            DateTimeOffset.UtcNow);
 
         ArgumentException exception =
             Assert.Throws<ArgumentException>(action);

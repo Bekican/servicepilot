@@ -6,7 +6,11 @@ public sealed class Organization
     {
     }
 
-    public Organization(Guid id, string name, string slug)
+    public Organization(
+        Guid id,
+        string name,
+        string slug,
+        DateTimeOffset createdAtUtc)
     {
         if (id == Guid.Empty)
         {
@@ -32,7 +36,7 @@ public sealed class Organization
         Id = id;
         Name = name.Trim();
         Slug = slug.Trim().ToLowerInvariant();
-        CreatedAtUtc = DateTimeOffset.UtcNow;
+        CreatedAtUtc = createdAtUtc;
     }
 
     public Guid Id { get; private set; }
