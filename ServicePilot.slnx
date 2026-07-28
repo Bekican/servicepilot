@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ServicePilot.Api/ServicePilot.Api.csproj" />
+    <Project Path="src/ServicePilot.Application/ServicePilot.Application.csproj" />
+    <Project Path="src/ServicePilot.Contracts/ServicePilot.Contracts.csproj" />
+    <Project Path="src/ServicePilot.Domain/ServicePilot.Domain.csproj" />
+    <Project Path="src/ServicePilot.Infrastructure/ServicePilot.Infrastructure.csproj" />
+    <Project Path="src/ServicePilot.Worker/ServicePilot.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ServicePilot.ArchitectureTests/ServicePilot.ArchitectureTests.csproj" />
+    <Project Path="tests/ServicePilot.IntegrationTests/ServicePilot.IntegrationTests.csproj" />
+    <Project Path="tests/ServicePilot.UnitTests/ServicePilot.UnitTests.csproj" />
+  </Folder>
+</Solution>

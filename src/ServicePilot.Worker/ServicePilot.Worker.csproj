@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-ServicePilot.Worker-9518fd10-8b2d-488f-afe3-80e311f0dc40</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ServicePilot.Application\ServicePilot.Application.csproj" />
+    <ProjectReference Include="..\ServicePilot.Infrastructure\ServicePilot.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
