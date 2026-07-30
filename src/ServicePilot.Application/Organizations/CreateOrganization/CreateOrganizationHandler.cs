@@ -71,8 +71,9 @@ public sealed class CreateOrganizationHandler
         try
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-        }catch(UniqueConstraintViolationException  exception)
-            when(exception.ConstraintName == "ux_organizations_slug")
+        }
+        catch (UniqueConstraintViolationException exception)
+            when (exception.ConstraintName == "ux_organizations_slug")
         {
             return Result<CreateOrganizationResponse>.Failure(
                 OrganizationErrors.SlugAlreadyExists

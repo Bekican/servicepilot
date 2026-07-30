@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+
 using ServicePilot.Infrastructure.Persistence;
+
 using Testcontainers.PostgreSql;
 
 namespace ServicePilot.IntegrationTests.Infrastructure;
@@ -22,6 +24,9 @@ public sealed class ServicePilotApiFactory
         IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.UseSetting(
+            "ConnectionStrings:Database",
+            _postgresContainer.GetConnectionString());
 
         builder.ConfigureServices(services =>
         {

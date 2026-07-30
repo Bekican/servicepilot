@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+
 using ServicePilot.Contracts.Organizations;
 using ServicePilot.Contracts.Organizations.CreateOrganization;
 using ServicePilot.IntegrationTests.Infrastructure;
@@ -44,71 +45,71 @@ public sealed class CreateOrganizationTests
 
 
     [Fact]
-public async Task Create_ShouldReturnConflict_WhenSlugAlreadyExists()
-{
-    string slug = $"duplicate-{Guid.NewGuid():N}";
+    public async Task Create_ShouldReturnConflict_WhenSlugAlreadyExists()
+    {
+        string slug = $"duplicate-{Guid.NewGuid():N}";
 
-    CreateOrganizationRequest firstRequest = new(
-        "First Organization",
-        slug);
+        CreateOrganizationRequest firstRequest = new(
+            "First Organization",
+            slug);
 
-    CreateOrganizationRequest secondRequest = new(
-        "Second Organization",
-        slug);
+        CreateOrganizationRequest secondRequest = new(
+            "Second Organization",
+            slug);
 
-    HttpResponseMessage firstResponse =
-        await _client.PostAsJsonAsync(
-            "/api/organizations",
-            firstRequest);
+        HttpResponseMessage firstResponse =
+            await _client.PostAsJsonAsync(
+                "/api/organizations",
+                firstRequest);
 
-    HttpResponseMessage secondResponse =
-        await _client.PostAsJsonAsync(
-            "/api/organizations",
-            secondRequest);
+        HttpResponseMessage secondResponse =
+            await _client.PostAsJsonAsync(
+                "/api/organizations",
+                secondRequest);
 
-    Assert.Equal(
-        HttpStatusCode.Created,
-        firstResponse.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Created,
+            firstResponse.StatusCode);
 
-    Assert.Equal(
-        HttpStatusCode.Conflict,
-        secondResponse.StatusCode);
-}
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            secondResponse.StatusCode);
+    }
 
-[Fact]
-public async Task Create_ShouldAllowOnlyOneRequest_WhenRequestsAreConcurrent()
-{
-    string slug = $"concurrent-{Guid.NewGuid():N}";
+    [Fact]
+    public async Task Create_ShouldAllowOnlyOneRequest_WhenRequestsAreConcurrent()
+    {
+        string slug = $"concurrent-{Guid.NewGuid():N}";
 
-    CreateOrganizationRequest firstRequest = new(
-        "Concurrent Organization One",
-        slug);
+        CreateOrganizationRequest firstRequest = new(
+            "Concurrent Organization One",
+            slug);
 
-    CreateOrganizationRequest secondRequest = new(
-        "Concurrent Organization Two",
-        slug);
+        CreateOrganizationRequest secondRequest = new(
+            "Concurrent Organization Two",
+            slug);
 
-    Task<HttpResponseMessage> firstTask =
-        _client.PostAsJsonAsync(
-            "/api/organizations",
-            firstRequest);
+        Task<HttpResponseMessage> firstTask =
+            _client.PostAsJsonAsync(
+                "/api/organizations",
+                firstRequest);
 
-    Task<HttpResponseMessage> secondTask =
-        _client.PostAsJsonAsync(
-            "/api/organizations",
-            secondRequest);
+        Task<HttpResponseMessage> secondTask =
+            _client.PostAsJsonAsync(
+                "/api/organizations",
+                secondRequest);
 
-    HttpResponseMessage[] responses =
-        await Task.WhenAll(firstTask, secondTask);
+        HttpResponseMessage[] responses =
+            await Task.WhenAll(firstTask, secondTask);
 
-    Assert.Single(
-        responses,
-        response =>
-            response.StatusCode == HttpStatusCode.Created);
+        Assert.Single(
+            responses,
+            response =>
+                response.StatusCode == HttpStatusCode.Created);
 
-    Assert.Single(
-        responses,
-        response =>
-            response.StatusCode == HttpStatusCode.Conflict);
-}
+        Assert.Single(
+            responses,
+            response =>
+                response.StatusCode == HttpStatusCode.Conflict);
+    }
 }

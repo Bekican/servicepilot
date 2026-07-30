@@ -1,8 +1,8 @@
+using ServicePilot.Application.Abstractions.Persistence;
+using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Organizations.CreateOrganization;
 using ServicePilot.Domain.Organizations;
-using ServicePilot.Application.Abstractions.Persistence;
-using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 
 namespace ServicePilot.UnitTests.Organizations.CreateOrganization;
 
@@ -39,38 +39,38 @@ public sealed class CreateOrganizationHandlerTests
     }
 
     [Fact]
-public async Task HandleAsync_ShouldFail_WhenDatabaseSlugConstraintIsViolated()
-{
-    FakeOrganizationRepository repository = new();
-
-    FakeUnitOfWork unitOfWork = new()
+    public async Task HandleAsync_ShouldFail_WhenDatabaseSlugConstraintIsViolated()
     {
-        ExceptionToThrow =
-            new UniqueConstraintViolationException(
-                "ux_organizations_slug",
-                new InvalidOperationException())
-    };
+        FakeOrganizationRepository repository = new();
 
-    FakeTimeProvider timeProvider = new(UtcNow);
+        FakeUnitOfWork unitOfWork = new()
+        {
+            ExceptionToThrow =
+                new UniqueConstraintViolationException(
+                    "ux_organizations_slug",
+                    new InvalidOperationException())
+        };
 
-    CreateOrganizationHandler handler = new(
-        repository,
-        unitOfWork,
-        timeProvider);
+        FakeTimeProvider timeProvider = new(UtcNow);
 
-    CreateOrganizationCommand command = new(
-        "Acme Technical Service",
-        "acme");
+        CreateOrganizationHandler handler = new(
+            repository,
+            unitOfWork,
+            timeProvider);
 
-    var result = await handler.HandleAsync(command);
+        CreateOrganizationCommand command = new(
+            "Acme Technical Service",
+            "acme");
 
-    Assert.True(result.IsFailure);
-    Assert.Equal(
-        OrganizationErrors.SlugAlreadyExists,
-        result.Error);
+        var result = await handler.HandleAsync(command);
 
-    Assert.Equal(1, unitOfWork.SaveChangesCallCount);
-}
+        Assert.True(result.IsFailure);
+        Assert.Equal(
+            OrganizationErrors.SlugAlreadyExists,
+            result.Error);
+
+        Assert.Equal(1, unitOfWork.SaveChangesCallCount);
+    }
 
     [Fact]
     public async Task HandleAsync_ShouldFail_WhenSlugAlreadyExists()

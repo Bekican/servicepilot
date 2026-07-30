@@ -1,6 +1,6 @@
 namespace ServicePilot.Application.Abstractions.Persistence.Exceptions;
 
-public sealed class UniqueConstraintViolationException  : Exception
+public sealed class UniqueConstraintViolationException : Exception
 {
     public UniqueConstraintViolationException(
         string? constraintName,
@@ -9,8 +9,8 @@ public sealed class UniqueConstraintViolationException  : Exception
             "A unique database constraint was violated",
             innerException)
     {
-        ConstraintName = constraintName; 
+        ConstraintName = constraintName;
     }
 
-    public string? ConstraintName {get; }
+    public string? ConstraintName { get; }
 }
