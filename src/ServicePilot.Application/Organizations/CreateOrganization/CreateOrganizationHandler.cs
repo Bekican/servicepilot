@@ -1,4 +1,5 @@
 using ServicePilot.Application.Abstractions.Persistence;
+using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Application.Common;
 using ServicePilot.Domain.Organizations;
 
@@ -67,7 +68,16 @@ public sealed class CreateOrganizationHandler
 
         _organizationRepository.Add(organization);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }catch(UniqueConstraintViolationException  exception)
+            when(exception.ConstraintName == "ux_organizations_slug")
+        {
+            return Result<CreateOrganizationResponse>.Failure(
+                OrganizationErrors.SlugAlreadyExists
+            );
+        }
 
         CreateOrganizationResponse response = new(
             organization.Id,

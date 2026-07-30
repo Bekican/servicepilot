@@ -1,6 +1,8 @@
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Organizations.CreateOrganization;
 using ServicePilot.Domain.Organizations;
+using ServicePilot.Application.Abstractions.Persistence;
+using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 
 namespace ServicePilot.UnitTests.Organizations.CreateOrganization;
 
@@ -35,6 +37,40 @@ public sealed class CreateOrganizationHandlerTests
         Assert.Single(repository.Organizations);
         Assert.Equal(1, unitOfWork.SaveChangesCallCount);
     }
+
+    [Fact]
+public async Task HandleAsync_ShouldFail_WhenDatabaseSlugConstraintIsViolated()
+{
+    FakeOrganizationRepository repository = new();
+
+    FakeUnitOfWork unitOfWork = new()
+    {
+        ExceptionToThrow =
+            new UniqueConstraintViolationException(
+                "ux_organizations_slug",
+                new InvalidOperationException())
+    };
+
+    FakeTimeProvider timeProvider = new(UtcNow);
+
+    CreateOrganizationHandler handler = new(
+        repository,
+        unitOfWork,
+        timeProvider);
+
+    CreateOrganizationCommand command = new(
+        "Acme Technical Service",
+        "acme");
+
+    var result = await handler.HandleAsync(command);
+
+    Assert.True(result.IsFailure);
+    Assert.Equal(
+        OrganizationErrors.SlugAlreadyExists,
+        result.Error);
+
+    Assert.Equal(1, unitOfWork.SaveChangesCallCount);
+}
 
     [Fact]
     public async Task HandleAsync_ShouldFail_WhenSlugAlreadyExists()
