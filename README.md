@@ -68,13 +68,12 @@ concrete use case justifies their operational cost.
 Implemented:
 
 - Organization domain and persistence model
-- `POST /api/organizations`
 - Application validation and slug normalization
 - Application pre-check plus PostgreSQL unique constraint for organization
   slug consistency
 - Unit and PostgreSQL integration tests, including concurrent requests
 - Employee domain and persistence groundwork
-- Organization Owner registration
+- Organization and initial Owner onboarding through `POST /api/auth/register`
 - Tenant-scoped user authentication with JWT access tokens
 - Framework password hashing
 - Authenticated tenant context from the `organization_id` claim
