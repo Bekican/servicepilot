@@ -30,5 +30,55 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: servicepilot-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: >-
+        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-servicepilot-local-demo-signing-key-change-me}
+      Smtp__Host: mailpit
+      Smtp__Port: 1025
+      Smtp__EnableSsl: "false"
+      Smtp__FromAddress: no-reply@servicepilot.local
+      Smtp__FromName: ServicePilot
+      Invitations__PublicBaseUrl: >-
+        http://localhost:5173/invitations/accept
+      Database__MigrateOnStartup: "true"
+    ports:
+      - "5267:8080"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: servicepilot-worker
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__Database: >-
+        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Smtp__Host: mailpit
+      Smtp__Port: 1025
+      Smtp__EnableSsl: "false"
+      Smtp__FromAddress: no-reply@servicepilot.local
+      Smtp__FromName: ServicePilot
+      Invitations__PublicBaseUrl: >-
+        http://localhost:5173/invitations/accept
+
 volumes:
   servicepilot-postgres-data:

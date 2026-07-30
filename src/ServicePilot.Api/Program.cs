@@ -1,8 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Threading.RateLimiting;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 using ServicePilot.Api.Authentication;
@@ -13,6 +16,7 @@ using ServicePilot.Application.Authentication;
 using ServicePilot.Domain.Users;
 using ServicePilot.Infrastructure;
 using ServicePilot.Infrastructure.Authentication;
+using ServicePilot.Infrastructure.Persistence;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +25,52 @@ JwtOptions jwtOptions =
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields =
+        HttpLoggingFields.RequestMethod
+        | HttpLoggingFields.RequestPath
+        | HttpLoggingFields.ResponseStatusCode
+        | HttpLoggingFields.Duration;
+});
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode =
+        StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(
+        "authentication",
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                GetClientPartition(httpContext),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit =
+                        builder.Configuration.GetValue(
+                            "RateLimiting:"
+                            + "AuthenticationPermitLimit",
+                            60),
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
+                }));
+    options.AddPolicy(
+        "invitations",
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                GetClientPartition(httpContext),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit =
+                        builder.Configuration.GetValue(
+                            "RateLimiting:"
+                            + "InvitationPermitLimit",
+                            30),
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
+                }));
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthorization(options =>
 {
@@ -130,16 +180,49 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 WebApplication app = builder.Build();
 
+if (builder.Configuration.GetValue<bool>(
+    "Database:MigrateOnStartup"))
+{
+    await using AsyncServiceScope scope =
+        app.Services.CreateAsyncScope();
+    ServicePilotDbContext dbContext =
+        scope.ServiceProvider.GetRequiredService<
+            ServicePilotDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
+app.UseExceptionHandler();
+app.UseHttpLogging();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions =
+        "nosniff";
+    context.Response.Headers.XFrameOptions =
+        "DENY";
+    context.Response.Headers.Append(
+        "Referrer-Policy",
+        "no-referrer");
+    await next(context);
+});
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+static string GetClientPartition(
+    HttpContext httpContext)
+{
+    return httpContext.Connection.RemoteIpAddress?
+        .ToString()
+        ?? "unknown";
+}
 
 public partial class Program;

@@ -31,18 +31,36 @@ namespace ServicePilot.Infrastructure;
 
 public static class DependencyInjection
 {
+    public static IServiceCollection AddWorkerInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        AddDatabase(services, configuration);
+        services.AddScoped<IAppointmentRepository,
+            AppointmentRepository>();
+        services.AddScoped<IReminderRepository,
+            ReminderRepository>();
+        services.AddScoped<IRetentionService,
+            RetentionService>();
+        services.AddScoped<IUnitOfWork>(
+            serviceProvider =>
+                serviceProvider.GetRequiredService<
+                    ServicePilotDbContext>());
+        services.AddSingleton(
+            _ => SmtpOptions.FromConfiguration(
+                configuration));
+        services.AddSingleton<IEmailSender,
+            SmtpEmailSender>();
+
+        return services;
+    }
+
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        string connectionString =
-            configuration.GetConnectionString("Database")
-                ?? throw new InvalidOperationException(
-                    "Connection string 'Database' not found.");
-        services.AddDbContext<ServicePilotDbContext>(options =>
-        {
-            options.UseNpgsql(connectionString);
-        });
+        AddDatabase(services, configuration);
+
         services.AddScoped<IOrganizationRepository,
             OrganizationRepository>();
         services.AddScoped<IUserRepository,
@@ -68,7 +86,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
-                ServicePilotDbContext>());
+                    ServicePilotDbContext>());
         services.AddSingleton<IPasswordHasher,
             AspNetPasswordHasher>();
         services.AddSingleton<IAccessTokenProvider,
@@ -88,6 +106,19 @@ public static class DependencyInjection
         services.AddSingleton<IInvitationLinkBuilder,
             InvitationLinkBuilder>();
         return services;
+    }
 
+    private static void AddDatabase(
+        IServiceCollection services,
+        IConfiguration configuration)
+    {
+        string connectionString =
+            configuration.GetConnectionString("Database")
+                ?? throw new InvalidOperationException(
+                    "Connection string 'Database' not found.");
+        services.AddDbContext<ServicePilotDbContext>(options =>
+        {
+            options.UseNpgsql(connectionString);
+        });
     }
 }

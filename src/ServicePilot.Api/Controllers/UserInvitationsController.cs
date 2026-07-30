@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 using ServicePilot.Api.Authentication;
 using ServicePilot.Application.Common;
@@ -11,6 +12,7 @@ using ServicePilot.Contracts.Users.Invitations;
 namespace ServicePilot.Api.Controllers;
 
 [ApiController]
+[EnableRateLimiting("invitations")]
 [Authorize(Policy = AuthorizationPolicies.ActiveOwner)]
 [Route("api/users/invitations")]
 public sealed class UserInvitationsController(

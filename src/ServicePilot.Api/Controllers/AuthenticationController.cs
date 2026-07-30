@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 using ServicePilot.Application.Abstractions.Tenancy;
 using ServicePilot.Application.Authentication;
@@ -15,6 +16,7 @@ using ServicePilot.Contracts.Authentication;
 namespace ServicePilot.Api.Controllers;
 
 [ApiController]
+[EnableRateLimiting("authentication")]
 [Route("api/auth")]
 public sealed class AuthenticationController(
     RegisterOrganizationOwnerHandler registerHandler,

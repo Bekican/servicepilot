@@ -34,6 +34,12 @@ public sealed class ServicePilotApiFactory
         builder.UseSetting(
             "Invitations:PublicBaseUrl",
             "https://servicepilot.test/invitations/accept");
+        builder.UseSetting(
+            "RateLimiting:AuthenticationPermitLimit",
+            "1000");
+        builder.UseSetting(
+            "RateLimiting:InvitationPermitLimit",
+            "1000");
 
         builder.ConfigureServices(services =>
         {
@@ -58,6 +64,9 @@ public sealed class ServicePilotApiFactory
 
     public FakeEmailSender EmailSender =>
         Services.GetRequiredService<FakeEmailSender>();
+
+    public string ConnectionString =>
+        _postgresContainer.GetConnectionString();
 
     public async Task<TResult> ExecuteDbContextAsync<TResult>(
         Func<ServicePilotDbContext, Task<TResult>> operation)

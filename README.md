@@ -99,11 +99,14 @@ Implemented:
 - Visible failed/skipped reminder states and manager-triggered manual retry
 - Owner/Admin UTC-day dashboard summary
 - Daily invitation cleanup and five-year audit anonymization
+- Health/readiness endpoints, safe HTTP logging and API security headers
+- Fixed-window rate limits for authentication and invitation endpoints
+- Containerized API, Worker, PostgreSQL and Mailpit demo environment
 
 Not yet implemented:
 
 - Employee application use cases and API endpoints
-- Demo hardening
+- Frontend user interface
 
 ## Engineering Goals
 
@@ -124,14 +127,27 @@ Architecture decisions are recorded under
 
 ## Local Infrastructure
 
-Start PostgreSQL and Mailpit:
+Start the complete demo, apply migrations and create the idempotent demo
+tenant:
 
 ```powershell
-docker compose up -d
+./scripts/start-demo.ps1
 ```
 
-Mailpit accepts SMTP traffic on `localhost:1025`. Its web interface is
-available at `http://localhost:8025`.
+Demo credentials:
+
+```text
+Organization: servicepilot-demo
+Email: owner@servicepilot.local
+Password: Demo1234!
+```
+
+The API is available at `http://localhost:5267`; Mailpit accepts SMTP traffic
+on `localhost:1025` and its web interface is available at
+`http://localhost:8025`.
+
+Infrastructure-only development remains available with
+`docker compose up -d postgres mailpit`.
 
 The local invitation link base URL and SMTP sender are configured in
 `appsettings.Development.json`. Production values must be supplied through
@@ -197,3 +213,10 @@ GET /api/dashboard/summary
 The Worker deletes used or expired invitations after 30 days. Audit events are
 retained; events older than five years have actor and metadata values
 anonymized.
+
+Operational endpoints:
+
+```text
+GET /health/live
+GET /health/ready
+```
