@@ -42,6 +42,21 @@ public sealed class ServicePilotApiFactory
         });
     }
 
+    public async Task<TResult> ExecuteDbContextAsync<TResult>(
+        Func<ServicePilotDbContext, Task<TResult>> operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        await using AsyncServiceScope scope =
+            Services.CreateAsyncScope();
+
+        ServicePilotDbContext dbContext =
+            scope.ServiceProvider.GetRequiredService<
+                ServicePilotDbContext>();
+
+        return await operation(dbContext);
+    }
+
     public async Task InitializeAsync()
     {
         await _postgresContainer.StartAsync();

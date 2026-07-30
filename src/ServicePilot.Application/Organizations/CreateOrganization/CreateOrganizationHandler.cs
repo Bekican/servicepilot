@@ -36,10 +36,22 @@ public sealed class CreateOrganizationHandler
                 OrganizationErrors.NameIsRequired);
         }
 
+        if (name.Length > Organization.MaxNameLength)
+        {
+            return Result<CreateOrganizationResponse>.Failure(
+                OrganizationErrors.NameTooLong);
+        }
+
         if (string.IsNullOrWhiteSpace(slug))
         {
             return Result<CreateOrganizationResponse>.Failure(
                 OrganizationErrors.SlugIsRequired);
+        }
+
+        if (slug.Length > Organization.MaxSlugLength)
+        {
+            return Result<CreateOrganizationResponse>.Failure(
+                OrganizationErrors.SlugTooLong);
         }
 
         if (!OrganizationSlug.IsValid(slug))

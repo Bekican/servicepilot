@@ -109,6 +109,150 @@ public sealed class CreateOrganizationHandlerTests
     }
 
     [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task HandleAsync_ShouldFail_WhenNameIsRequired(
+        string name)
+    {
+        FakeOrganizationRepository repository = new();
+        FakeUnitOfWork unitOfWork = new();
+        FakeTimeProvider timeProvider = new(UtcNow);
+
+        CreateOrganizationHandler handler = new(
+            repository,
+            unitOfWork,
+            timeProvider);
+
+        CreateOrganizationCommand command = new(
+            name,
+            "acme");
+
+        var result = await handler.HandleAsync(command);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(
+            OrganizationErrors.NameIsRequired,
+            result.Error);
+
+        Assert.Empty(repository.Organizations);
+        Assert.Equal(0, unitOfWork.SaveChangesCallCount);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldFail_WhenNameExceedsMaximumLength()
+    {
+        FakeOrganizationRepository repository = new();
+        FakeUnitOfWork unitOfWork = new();
+        FakeTimeProvider timeProvider = new(UtcNow);
+
+        CreateOrganizationHandler handler = new(
+            repository,
+            unitOfWork,
+            timeProvider);
+
+        CreateOrganizationCommand command = new(
+            new string('a', Organization.MaxNameLength + 1),
+            "acme");
+
+        var result = await handler.HandleAsync(command);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(
+            OrganizationErrors.NameTooLong,
+            result.Error);
+
+        Assert.Empty(repository.Organizations);
+        Assert.Equal(0, unitOfWork.SaveChangesCallCount);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task HandleAsync_ShouldFail_WhenSlugIsRequired(
+        string slug)
+    {
+        FakeOrganizationRepository repository = new();
+        FakeUnitOfWork unitOfWork = new();
+        FakeTimeProvider timeProvider = new(UtcNow);
+
+        CreateOrganizationHandler handler = new(
+            repository,
+            unitOfWork,
+            timeProvider);
+
+        CreateOrganizationCommand command = new(
+            "Acme",
+            slug);
+
+        var result = await handler.HandleAsync(command);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(
+            OrganizationErrors.SlugIsRequired,
+            result.Error);
+
+        Assert.Empty(repository.Organizations);
+        Assert.Equal(0, unitOfWork.SaveChangesCallCount);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldFail_WhenSlugExceedsMaximumLength()
+    {
+        FakeOrganizationRepository repository = new();
+        FakeUnitOfWork unitOfWork = new();
+        FakeTimeProvider timeProvider = new(UtcNow);
+
+        CreateOrganizationHandler handler = new(
+            repository,
+            unitOfWork,
+            timeProvider);
+
+        CreateOrganizationCommand command = new(
+            "Acme",
+            new string('a', Organization.MaxSlugLength + 1));
+
+        var result = await handler.HandleAsync(command);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(
+            OrganizationErrors.SlugTooLong,
+            result.Error);
+
+        Assert.Empty(repository.Organizations);
+        Assert.Equal(0, unitOfWork.SaveChangesCallCount);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ShouldCreateOrganization_AtMaximumLengths()
+    {
+        FakeOrganizationRepository repository = new();
+        FakeUnitOfWork unitOfWork = new();
+        FakeTimeProvider timeProvider = new(UtcNow);
+
+        CreateOrganizationHandler handler = new(
+            repository,
+            unitOfWork,
+            timeProvider);
+
+        CreateOrganizationCommand command = new(
+            new string('a', Organization.MaxNameLength),
+            new string('a', Organization.MaxSlugLength));
+
+        var result = await handler.HandleAsync(command);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(
+            Organization.MaxNameLength,
+            result.Value.Name.Length);
+        Assert.Equal(
+            Organization.MaxSlugLength,
+            result.Value.Slug.Length);
+
+        Assert.Single(repository.Organizations);
+        Assert.Equal(1, unitOfWork.SaveChangesCallCount);
+    }
+
+    [Theory]
     [InlineData("acme service")]
     [InlineData("acme_service")]
     [InlineData("-acme")]

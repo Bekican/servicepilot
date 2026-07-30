@@ -20,12 +20,12 @@ internal sealed class OrganizationConfiguration
 
         builder.Property(organization => organization.Name)
             .HasColumnName("name")
-            .HasMaxLength(200)
+            .HasMaxLength(Organization.MaxNameLength)
             .IsRequired();
 
         builder.Property(organization => organization.Slug)
             .HasColumnName("slug")
-            .HasMaxLength(100)
+            .HasMaxLength(Organization.MaxSlugLength)
             .IsRequired();
 
         builder.Property(organization => organization.CreatedAtUtc)

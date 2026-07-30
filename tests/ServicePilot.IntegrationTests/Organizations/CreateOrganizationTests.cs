@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 
+using Microsoft.EntityFrameworkCore;
+
 using ServicePilot.Contracts.Organizations;
 using ServicePilot.Contracts.Organizations.CreateOrganization;
 using ServicePilot.IntegrationTests.Infrastructure;
@@ -11,10 +13,12 @@ namespace ServicePilot.IntegrationTests.Organizations;
 public sealed class CreateOrganizationTests
 {
     private readonly HttpClient _client;
+    private readonly ServicePilotApiFactory _factory;
 
     public CreateOrganizationTests(
         ServicePilotApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -74,6 +78,15 @@ public sealed class CreateOrganizationTests
         Assert.Equal(
             HttpStatusCode.Conflict,
             secondResponse.StatusCode);
+
+        int organizationCount =
+            await _factory.ExecuteDbContextAsync(
+                dbContext =>
+                    dbContext.Organizations.CountAsync(
+                        organization =>
+                            organization.Slug == slug));
+
+        Assert.Equal(1, organizationCount);
     }
 
     [Fact]
@@ -111,5 +124,14 @@ public sealed class CreateOrganizationTests
             responses,
             response =>
                 response.StatusCode == HttpStatusCode.Conflict);
+
+        int organizationCount =
+            await _factory.ExecuteDbContextAsync(
+                dbContext =>
+                    dbContext.Organizations.CountAsync(
+                        organization =>
+                            organization.Slug == slug));
+
+        Assert.Equal(1, organizationCount);
     }
 }

@@ -4,6 +4,7 @@ using Npgsql;
 
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
+using ServicePilot.Domain.Employees;
 using ServicePilot.Domain.Organizations;
 
 namespace ServicePilot.Infrastructure.Persistence;
@@ -12,6 +13,7 @@ public sealed class ServicePilotDbContext(
     DbContextOptions<ServicePilotDbContext> options)
     : DbContext(options), IUnitOfWork
 {
+    public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Organization> Organizations => Set<Organization>();
 
     public override async Task<int> SaveChangesAsync(

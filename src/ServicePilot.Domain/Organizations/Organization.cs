@@ -2,6 +2,9 @@ namespace ServicePilot.Domain.Organizations;
 
 public sealed class Organization
 {
+    public const int MaxNameLength = 200;
+    public const int MaxSlugLength = 100;
+
     private Organization()
     {
     }
