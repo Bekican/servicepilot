@@ -14,6 +14,11 @@ internal sealed class ServiceCatalogItemConfiguration
     {
         builder.ToTable("services");
         builder.HasKey(service => service.Id);
+        builder.HasAlternateKey(service => new
+        {
+            service.OrganizationId,
+            service.Id
+        });
         builder.Property(service => service.Id)
             .HasColumnName("id")
             .ValueGeneratedNever();

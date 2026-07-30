@@ -14,6 +14,11 @@ internal sealed class UserConfiguration
         builder.ToTable("users");
 
         builder.HasKey(user => user.Id);
+        builder.HasAlternateKey(user => new
+        {
+            user.OrganizationId,
+            user.Id
+        });
 
         builder.Property(user => user.Id)
             .HasColumnName("id")

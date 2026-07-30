@@ -4,6 +4,7 @@ using Npgsql;
 
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
+using ServicePilot.Domain.Appointments;
 using ServicePilot.Domain.Auditing;
 using ServicePilot.Domain.Customers;
 using ServicePilot.Domain.Employees;
@@ -20,6 +21,8 @@ public sealed class ServicePilotDbContext(
 {
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Appointment> Appointments =>
+        Set<Appointment>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerAddress> CustomerAddresses =>
         Set<CustomerAddress>();
@@ -56,6 +59,16 @@ public sealed class ServicePilotDbContext(
             when (exception.InnerException is PostgresException
             {
                 SqlState: PostgresErrorCodes.CheckViolation
+            } postgresException)
+        {
+            throw new ConstraintViolationException(
+                postgresException.ConstraintName,
+                exception);
+        }
+        catch (DbUpdateException exception)
+            when (exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.ExclusionViolation
             } postgresException)
         {
             throw new ConstraintViolationException(
