@@ -6,10 +6,12 @@ using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Auditing;
+using ServicePilot.Application.Customers;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Users;
 using ServicePilot.Infrastructure.Auditing;
 using ServicePilot.Infrastructure.Authentication;
+using ServicePilot.Infrastructure.Customers;
 using ServicePilot.Infrastructure.Email;
 using ServicePilot.Infrastructure.Organizations;
 using ServicePilot.Infrastructure.Persistence;
@@ -39,6 +41,8 @@ public static class DependencyInjection
             UserInvitationRepository>();
         services.AddScoped<IAuditLogRepository,
             AuditLogRepository>();
+        services.AddScoped<ICustomerNumberGenerator,
+            CustomerNumberGenerator>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<

@@ -5,9 +5,11 @@ using Npgsql;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Domain.Auditing;
+using ServicePilot.Domain.Customers;
 using ServicePilot.Domain.Employees;
 using ServicePilot.Domain.Organizations;
 using ServicePilot.Domain.Users;
+using ServicePilot.Infrastructure.Customers;
 
 namespace ServicePilot.Infrastructure.Persistence;
 
@@ -17,10 +19,16 @@ public sealed class ServicePilotDbContext(
 {
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<CustomerAddress> CustomerAddresses =>
+        Set<CustomerAddress>();
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<User> Users => Set<User>();
     public DbSet<UserInvitation> UserInvitations =>
         Set<UserInvitation>();
+    internal DbSet<CustomerNumberCounter>
+        CustomerNumberCounters =>
+            Set<CustomerNumberCounter>();
 
     public override async Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default
