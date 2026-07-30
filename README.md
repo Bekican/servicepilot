@@ -90,6 +90,7 @@ Implemented:
 - Tenant-scoped customer email and E.164 phone uniqueness
 - Concurrency-safe `CUS-000001` customer numbering
 - Optional multiple addresses with one active primary address
+- Tenant-scoped service catalog with default duration and active status
 
 Not yet implemented:
 

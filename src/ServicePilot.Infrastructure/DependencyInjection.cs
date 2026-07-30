@@ -8,6 +8,7 @@ using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Customers;
 using ServicePilot.Application.Organizations;
+using ServicePilot.Application.Services;
 using ServicePilot.Application.Users;
 using ServicePilot.Infrastructure.Auditing;
 using ServicePilot.Infrastructure.Authentication;
@@ -15,6 +16,7 @@ using ServicePilot.Infrastructure.Customers;
 using ServicePilot.Infrastructure.Email;
 using ServicePilot.Infrastructure.Organizations;
 using ServicePilot.Infrastructure.Persistence;
+using ServicePilot.Infrastructure.Services;
 using ServicePilot.Infrastructure.Users;
 
 namespace ServicePilot.Infrastructure;
@@ -45,6 +47,8 @@ public static class DependencyInjection
             CustomerNumberGenerator>();
         services.AddScoped<ICustomerRepository,
             CustomerRepository>();
+        services.AddScoped<IServiceCatalogRepository,
+            ServiceCatalogRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<

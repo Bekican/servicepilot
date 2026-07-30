@@ -5,6 +5,7 @@ using ServicePilot.Application.Authentication.Login;
 using ServicePilot.Application.Authentication.Register;
 using ServicePilot.Application.Customers;
 using ServicePilot.Application.Organizations.CreateOrganization;
+using ServicePilot.Application.Services;
 using ServicePilot.Application.Users.Invitations.CreateInvitation;
 using ServicePilot.Application.Users.Invitations.ResendInvitation;
 using ServicePilot.Application.Users.Management.ChangeUserRole;
@@ -29,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ChangeUserRoleHandler>();
         services.AddScoped<ChangeUserStatusHandler>();
         services.AddScoped<CustomerManagementService>();
+        services.AddScoped<ServiceCatalogService>();
 
         return services;
     }
