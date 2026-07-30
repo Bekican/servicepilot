@@ -9,6 +9,7 @@ using ServicePilot.Application.Appointments;
 using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Customers;
 using ServicePilot.Application.Organizations;
+using ServicePilot.Application.Reminders;
 using ServicePilot.Application.Services;
 using ServicePilot.Application.Users;
 using ServicePilot.Infrastructure.Appointments;
@@ -18,6 +19,7 @@ using ServicePilot.Infrastructure.Customers;
 using ServicePilot.Infrastructure.Email;
 using ServicePilot.Infrastructure.Organizations;
 using ServicePilot.Infrastructure.Persistence;
+using ServicePilot.Infrastructure.Reminders;
 using ServicePilot.Infrastructure.Services;
 using ServicePilot.Infrastructure.Users;
 
@@ -53,6 +55,8 @@ public static class DependencyInjection
             ServiceCatalogRepository>();
         services.AddScoped<IAppointmentRepository,
             AppointmentRepository>();
+        services.AddScoped<IReminderRepository,
+            ReminderRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<

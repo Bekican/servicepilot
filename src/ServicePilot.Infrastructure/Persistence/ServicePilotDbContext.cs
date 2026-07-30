@@ -9,6 +9,7 @@ using ServicePilot.Domain.Auditing;
 using ServicePilot.Domain.Customers;
 using ServicePilot.Domain.Employees;
 using ServicePilot.Domain.Organizations;
+using ServicePilot.Domain.Reminders;
 using ServicePilot.Domain.Services;
 using ServicePilot.Domain.Users;
 using ServicePilot.Infrastructure.Customers;
@@ -27,6 +28,7 @@ public sealed class ServicePilotDbContext(
     public DbSet<CustomerAddress> CustomerAddresses =>
         Set<CustomerAddress>();
     public DbSet<Organization> Organizations => Set<Organization>();
+    public DbSet<Reminder> Reminders => Set<Reminder>();
     public DbSet<ServiceCatalogItem> Services =>
         Set<ServiceCatalogItem>();
     public DbSet<User> Users => Set<User>();

@@ -6,10 +6,12 @@ using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Customers;
+using ServicePilot.Application.Reminders;
 using ServicePilot.Application.Services;
 using ServicePilot.Application.Users;
 using ServicePilot.Domain.Appointments;
 using ServicePilot.Domain.Customers;
+using ServicePilot.Domain.Reminders;
 using ServicePilot.Domain.Services;
 using ServicePilot.Domain.Users;
 
@@ -21,6 +23,7 @@ public sealed partial class AppointmentService(
     ICustomerRepository customerRepository,
     IServiceCatalogRepository serviceRepository,
     IUserRepository userRepository,
+    IReminderRepository reminderRepository,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -40,7 +43,7 @@ public sealed partial class AppointmentService(
                 AppointmentErrors.InvalidData);
         }
 
-        Error? referenceError =
+        (Customer? customer, Error? referenceError) =
             await ValidateReferencesAsync(
                 data.CustomerId,
                 data.ServiceId,
@@ -77,6 +80,20 @@ public sealed partial class AppointmentService(
             endAtUtc,
             timeProvider.GetUtcNow());
         appointmentRepository.Add(appointment);
+
+        DateTimeOffset nowUtc = timeProvider.GetUtcNow();
+        DateTimeOffset reminderTime =
+            startAtUtc - TimeSpan.FromHours(24);
+        Reminder reminder = new(
+            Guid.NewGuid(),
+            currentUser.OrganizationId,
+            appointment.Id,
+            customer!.Email,
+            reminderTime > nowUtc
+                ? reminderTime
+                : nowUtc,
+            nowUtc);
+        reminderRepository.Add(reminder);
 
         Result saveResult =
             await SaveAsync(cancellationToken);
@@ -256,7 +273,8 @@ public sealed partial class AppointmentService(
                 Map(appointment));
     }
 
-    private async Task<Error?> ValidateReferencesAsync(
+    private async Task<(Customer? Customer, Error? Error)>
+        ValidateReferencesAsync(
         Guid customerId,
         Guid serviceId,
         Guid? technicianUserId,
@@ -270,7 +288,9 @@ public sealed partial class AppointmentService(
 
         if (customer is null || !customer.IsActive)
         {
-            return AppointmentErrors.CustomerUnavailable;
+            return (
+                null,
+                AppointmentErrors.CustomerUnavailable);
         }
 
         ServiceCatalogItem? service =
@@ -281,14 +301,19 @@ public sealed partial class AppointmentService(
 
         if (service is null || !service.IsActive)
         {
-            return AppointmentErrors.ServiceUnavailable;
+            return (
+                null,
+                AppointmentErrors.ServiceUnavailable);
         }
 
-        return technicianUserId is Guid technicianId
-            ? await ValidateTechnicianAsync(
-                technicianId,
-                cancellationToken)
-            : null;
+        Error? technicianError =
+            technicianUserId is Guid technicianId
+                ? await ValidateTechnicianAsync(
+                    technicianId,
+                    cancellationToken)
+                : null;
+
+        return (customer, technicianError);
     }
 
     private async Task<Error?> ValidateTechnicianAsync(

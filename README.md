@@ -94,11 +94,13 @@ Implemented:
 - Tenant-scoped appointment creation, listing, assignment and state transitions
 - Offset-aware appointment input with UTC persistence
 - Application overlap pre-check and PostgreSQL exclusion constraint
+- Transactional appointment reminders with durable Worker processing
+- Reminder retry intervals of 1, 5 and 30 minutes
+- Visible failed/skipped reminder states and manager-triggered manual retry
 
 Not yet implemented:
 
 - Employee application use cases and API endpoints
-- Durable reminder processing
 - Dashboard and retention jobs
 - Demo hardening
 
@@ -173,3 +175,14 @@ GET   /api/appointments/{id}
 PATCH /api/appointments/{id}/technician
 PATCH /api/appointments/{id}/status
 ```
+
+Reminder endpoints:
+
+```text
+GET  /api/reminders
+POST /api/reminders/{id}/retry
+```
+
+The API persists the appointment and its reminder in one transaction. The
+Worker claims due reminders atomically and sends email outside that
+transaction, so an SMTP failure never rolls back the appointment.

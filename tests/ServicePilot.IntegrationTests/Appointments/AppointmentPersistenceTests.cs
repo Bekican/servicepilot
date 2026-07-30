@@ -1,12 +1,17 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
+using ServicePilot.Application.Reminders;
 using ServicePilot.Contracts.Appointments;
 using ServicePilot.Contracts.Authentication;
 using ServicePilot.Contracts.Customers;
 using ServicePilot.Contracts.Services;
 using ServicePilot.Domain.Appointments;
+using ServicePilot.Domain.Reminders;
 using ServicePilot.IntegrationTests.Infrastructure;
 
 namespace ServicePilot.IntegrationTests.Appointments;
@@ -117,6 +122,64 @@ public sealed class AppointmentPersistenceTests
                 ServicePilot.Contracts.Appointments
                     .AppointmentResponse>();
         Assert.NotNull(appointment);
+
+        Reminder? reminder =
+            await _factory.ExecuteDbContextAsync(
+                dbContext =>
+                    dbContext.Reminders.SingleOrDefaultAsync(
+                        candidate =>
+                            candidate.OrganizationId
+                                == dependencies.OrganizationId
+                            && candidate.AppointmentId
+                                == appointment.Id));
+        Assert.NotNull(reminder);
+        Assert.Equal(
+            ReminderStatus.Pending,
+            reminder.Status);
+        Assert.Equal(
+            "customer-",
+            reminder.RecipientEmail![..9]);
+
+        await _factory.ExecuteDbContextAsync(
+            async dbContext =>
+            {
+                DateTimeOffset dueAtUtc =
+                    DateTimeOffset.UtcNow.AddMinutes(-1);
+                return await dbContext.Database
+                    .ExecuteSqlInterpolatedAsync(
+                        $"""
+                        UPDATE reminders
+                        SET next_attempt_at_utc = {dueAtUtc}
+                        WHERE id = {reminder.Id}
+                        """);
+            });
+
+        _factory.EmailSender.Clear();
+        await using (
+            AsyncServiceScope scope =
+                _factory.Services.CreateAsyncScope())
+        {
+            ReminderProcessor processor =
+                scope.ServiceProvider.GetRequiredService<
+                    ReminderProcessor>();
+            int processed =
+                await processor.ProcessDueAsync();
+            Assert.Equal(1, processed);
+        }
+
+        ReminderStatus deliveredStatus =
+            await _factory.ExecuteDbContextAsync(
+                dbContext =>
+                    dbContext.Reminders
+                        .Where(candidate =>
+                            candidate.Id == reminder.Id)
+                        .Select(candidate =>
+                            candidate.Status)
+                        .SingleAsync());
+        Assert.Equal(
+            ReminderStatus.Sent,
+            deliveredStatus);
+        Assert.Single(_factory.EmailSender.Messages);
 
         using HttpRequestMessage confirmRequest = new(
             HttpMethod.Patch,

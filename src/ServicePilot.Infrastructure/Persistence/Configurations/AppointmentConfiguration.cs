@@ -76,6 +76,11 @@ internal sealed class AppointmentConfiguration
         })
             .HasDatabaseName(
                 "ix_appointments_organization_start");
+        builder.HasAlternateKey(appointment => new
+        {
+            appointment.OrganizationId,
+            appointment.Id
+        });
 
         builder.HasOne<Organization>()
             .WithMany()
