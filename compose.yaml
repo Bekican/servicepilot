@@ -1,26 +1,34 @@
 services:
-    postgres:
-      image: postgres:17-alpine
-      container_name : servicepilot-postgres
-      restart: unless-stopped
-      environment:
-        POSTGRES_DB: ${POSTGRES_DB}
-        POSTGRES_USER: ${POSTGRES_USER}
-        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      ports:
-        - "${POSTGRES_PORT}:5432"
-      volumes:
+  postgres:
+    image: postgres:17-alpine
+    container_name: servicepilot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
       - servicepilot-postgres-data:/var/lib/postgresql/data
-      healthcheck:
-        test:
-          [
-            "CMD-SHELL",
-            "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
-          ]
-        interval : 5s
-        timeout : 5s
-        retries : 10
-        start_period : 10s
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: servicepilot-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   servicepilot-postgres-data:

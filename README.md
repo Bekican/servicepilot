@@ -57,6 +57,7 @@ one codebase and share PostgreSQL while module boundaries are kept explicit.
 - PostgreSQL
 - Entity Framework Core
 - Docker
+- Mailpit
 - xUnit
 - Testcontainers
 
@@ -77,6 +78,10 @@ Implemented:
 - Tenant-scoped user authentication with JWT access tokens
 - Framework password hashing
 - Authenticated tenant context from the `organization_id` claim
+- Owner-only, 24-hour and single-use email invitations
+- SHA-256 invitation token persistence without raw tokens
+- SMTP email delivery through `IEmailSender`
+- Local email inspection through Mailpit
 
 Not yet implemented:
 
@@ -101,3 +106,35 @@ The project is also used to study:
 
 Architecture decisions are recorded under
 [`docs/architecture/decisions`](docs/architecture/decisions).
+
+## Local Infrastructure
+
+Start PostgreSQL and Mailpit:
+
+```powershell
+docker compose up -d
+```
+
+Mailpit accepts SMTP traffic on `localhost:1025`. Its web interface is
+available at `http://localhost:8025`.
+
+The local invitation link base URL and SMTP sender are configured in
+`appsettings.Development.json`. Production values must be supplied through
+environment variables or secret configuration:
+
+- `Smtp__Host`
+- `Smtp__Port`
+- `Smtp__EnableSsl`
+- `Smtp__FromAddress`
+- `Smtp__FromName`
+- `Smtp__Username`
+- `Smtp__Password`
+- `Invitations__PublicBaseUrl`
+
+Invitation endpoints:
+
+```text
+POST /api/users/invitations
+POST /api/users/invitations/{id}/resend
+POST /api/auth/invitations/accept
+```

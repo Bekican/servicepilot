@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
+using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Infrastructure.Persistence;
 
 using Testcontainers.PostgreSql;
@@ -30,6 +31,9 @@ public sealed class ServicePilotApiFactory
         builder.UseSetting(
             "Jwt:SigningKey",
             "servicepilot-integration-test-signing-key-never-use-in-production");
+        builder.UseSetting(
+            "Invitations:PublicBaseUrl",
+            "https://servicepilot.test/invitations/accept");
 
         builder.ConfigureServices(services =>
         {
@@ -37,13 +41,23 @@ public sealed class ServicePilotApiFactory
                 DbContextOptions<ServicePilotDbContext>>();
 
             services.RemoveAll<ServicePilotDbContext>();
+            services.RemoveAll<IEmailSender>();
 
             services.AddDbContext<ServicePilotDbContext>(
                 options =>
                     options.UseNpgsql(
                         _postgresContainer.GetConnectionString()));
+
+            services.AddSingleton<FakeEmailSender>();
+            services.AddSingleton<IEmailSender>(
+                serviceProvider =>
+                    serviceProvider.GetRequiredService<
+                        FakeEmailSender>());
         });
     }
+
+    public FakeEmailSender EmailSender =>
+        Services.GetRequiredService<FakeEmailSender>();
 
     public async Task<TResult> ExecuteDbContextAsync<TResult>(
         Func<ServicePilotDbContext, Task<TResult>> operation)

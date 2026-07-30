@@ -17,6 +17,8 @@ public sealed class ServicePilotDbContext(
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserInvitation> UserInvitations =>
+        Set<UserInvitation>();
 
     public override async Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default

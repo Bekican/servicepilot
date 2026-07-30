@@ -3,10 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using ServicePilot.Application.Abstractions.Authentication;
+using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Users;
 using ServicePilot.Infrastructure.Authentication;
+using ServicePilot.Infrastructure.Email;
 using ServicePilot.Infrastructure.Organizations;
 using ServicePilot.Infrastructure.Persistence;
 using ServicePilot.Infrastructure.Users;
@@ -31,6 +33,8 @@ public static class DependencyInjection
             OrganizationRepository>();
         services.AddScoped<IUserRepository,
             UserRepository>();
+        services.AddScoped<IUserInvitationRepository,
+            UserInvitationRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
@@ -39,6 +43,20 @@ public static class DependencyInjection
             AspNetPasswordHasher>();
         services.AddSingleton<IAccessTokenProvider,
             JwtAccessTokenProvider>();
+        services.AddSingleton<IInvitationTokenService,
+            InvitationTokenService>();
+        services.AddSingleton(
+            serviceProvider =>
+                SmtpOptions.FromConfiguration(
+                    configuration));
+        services.AddSingleton<IEmailSender,
+            SmtpEmailSender>();
+        services.AddSingleton(
+            serviceProvider =>
+                InvitationLinkOptions.FromConfiguration(
+                    configuration));
+        services.AddSingleton<IInvitationLinkBuilder,
+            InvitationLinkBuilder>();
         return services;
 
     }

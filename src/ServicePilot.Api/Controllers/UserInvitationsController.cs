@@ -1,0 +1,122 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+using ServicePilot.Application.Common;
+using ServicePilot.Application.Users.Invitations;
+using ServicePilot.Application.Users.Invitations.CreateInvitation;
+using ServicePilot.Application.Users.Invitations.ResendInvitation;
+using ServicePilot.Contracts.Users.Invitations;
+using ServicePilot.Domain.Users;
+
+namespace ServicePilot.Api.Controllers;
+
+[ApiController]
+[Authorize(Roles = UserRoles.Owner)]
+[Route("api/users/invitations")]
+public sealed class UserInvitationsController(
+    CreateInvitationHandler createHandler,
+    ResendInvitationHandler resendHandler)
+    : ControllerBase
+{
+    [HttpPost]
+    [ProducesResponseType(
+        typeof(UserInvitationResponse),
+        StatusCodes.Status201Created)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status409Conflict)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> Create(
+        CreateInvitationRequest request,
+        CancellationToken cancellationToken)
+    {
+        Result<InvitationResponse> result =
+            await createHandler.HandleAsync(
+                new CreateInvitationCommand(
+                    request.Email,
+                    request.Role),
+                cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return ToProblem(result.Error);
+        }
+
+        UserInvitationResponse response =
+            MapResponse(result.Value);
+
+        return Created(
+            $"/api/users/invitations/{response.Id}",
+            response);
+    }
+
+    [HttpPost("{id:guid}/resend")]
+    [ProducesResponseType(
+        typeof(UserInvitationResponse),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status404NotFound)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status409Conflict)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> Resend(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        Result<InvitationResponse> result =
+            await resendHandler.HandleAsync(
+                new ResendInvitationCommand(id),
+                cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return ToProblem(result.Error);
+        }
+
+        return Ok(MapResponse(result.Value));
+    }
+
+    private ObjectResult ToProblem(Error error)
+    {
+        int statusCode = error switch
+        {
+            _ when error == InvitationErrors.NotFound =>
+                StatusCodes.Status404NotFound,
+            _ when error
+                is var conflict
+                && (
+                    conflict == InvitationErrors.UserAlreadyExists
+                    || conflict == InvitationErrors.NotPending
+                    || conflict == InvitationErrors.ConcurrentRequest) =>
+                StatusCodes.Status409Conflict,
+            _ when error
+                == InvitationErrors.EmailDeliveryFailed =>
+                StatusCodes.Status503ServiceUnavailable,
+            _ => StatusCodes.Status400BadRequest
+        };
+
+        return Problem(
+            statusCode: statusCode,
+            title: error.Code,
+            detail: error.Message);
+    }
+
+    private static UserInvitationResponse MapResponse(
+        InvitationResponse response)
+    {
+        return new UserInvitationResponse(
+            response.Id,
+            response.Email,
+            response.Role,
+            response.ExpiresAtUtc);
+    }
+}

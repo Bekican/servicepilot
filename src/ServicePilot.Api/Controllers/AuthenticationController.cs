@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Mvc;
 
 using ServicePilot.Application.Abstractions.Tenancy;
 using ServicePilot.Application.Authentication;
+using ServicePilot.Application.Authentication.AcceptInvitation;
 using ServicePilot.Application.Authentication.Login;
 using ServicePilot.Application.Authentication.Register;
 using ServicePilot.Application.Common;
+using ServicePilot.Application.Users.Invitations;
 using ServicePilot.Contracts.Authentication;
 
 namespace ServicePilot.Api.Controllers;
@@ -17,6 +19,7 @@ namespace ServicePilot.Api.Controllers;
 public sealed class AuthenticationController(
     RegisterOrganizationOwnerHandler registerHandler,
     LoginHandler loginHandler,
+    AcceptInvitationHandler acceptInvitationHandler,
     ITenantContext tenantContext)
     : ControllerBase
 {
@@ -94,6 +97,40 @@ public sealed class AuthenticationController(
         return Ok(MapResponse(result.Value));
     }
 
+    [AllowAnonymous]
+    [HttpPost("invitations/accept")]
+    [ProducesResponseType(
+        typeof(AuthenticationTokenResponse),
+        StatusCodes.Status200OK)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(
+        typeof(ProblemDetails),
+        StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AcceptInvitation(
+        AcceptInvitationRequest request,
+        CancellationToken cancellationToken)
+    {
+        AcceptInvitationCommand command = new(
+            request.Token,
+            request.FirstName,
+            request.LastName,
+            request.Password);
+
+        Result<AuthenticationResponse> result =
+            await acceptInvitationHandler.HandleAsync(
+                command,
+                cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return ToProblem(result.Error);
+        }
+
+        return Ok(MapResponse(result.Value));
+    }
+
     [Authorize]
     [HttpGet("me")]
     [ProducesResponseType(
@@ -135,6 +172,9 @@ public sealed class AuthenticationController(
                     StatusCodes.Status409Conflict,
             _ when error
                 == AuthenticationErrors.EmailAlreadyExists =>
+                    StatusCodes.Status409Conflict,
+            _ when error
+                == InvitationErrors.UserAlreadyExists =>
                     StatusCodes.Status409Conflict,
             _ => StatusCodes.Status400BadRequest
         };
