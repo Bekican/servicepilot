@@ -8,4 +8,6 @@ internal static class AuthorizationPolicies
     public const string ServiceWrite = "ServiceWrite";
     public const string AppointmentManage =
         "AppointmentManage";
+    public const string DashboardView =
+        "DashboardView";
 }

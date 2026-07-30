@@ -72,6 +72,16 @@ builder.Services.AddAuthorization(options =>
                     UserRoles.Admin,
                     UserRoles.Dispatcher));
         });
+    options.AddPolicy(
+        AuthorizationPolicies.DashboardView,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.AddRequirements(
+                new ActiveRoleRequirement(
+                    UserRoles.Owner,
+                    UserRoles.Admin));
+        });
 });
 builder.Services.AddScoped<
     IAuthorizationHandler,

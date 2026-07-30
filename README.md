@@ -97,11 +97,12 @@ Implemented:
 - Transactional appointment reminders with durable Worker processing
 - Reminder retry intervals of 1, 5 and 30 minutes
 - Visible failed/skipped reminder states and manager-triggered manual retry
+- Owner/Admin UTC-day dashboard summary
+- Daily invitation cleanup and five-year audit anonymization
 
 Not yet implemented:
 
 - Employee application use cases and API endpoints
-- Dashboard and retention jobs
 - Demo hardening
 
 ## Engineering Goals
@@ -186,3 +187,13 @@ POST /api/reminders/{id}/retry
 The API persists the appointment and its reminder in one transaction. The
 Worker claims due reminders atomically and sends email outside that
 transaction, so an SMTP failure never rolls back the appointment.
+
+Dashboard endpoint:
+
+```text
+GET /api/dashboard/summary
+```
+
+The Worker deletes used or expired invitations after 30 days. Audit events are
+retained; events older than five years have actor and metadata values
+anonymized.

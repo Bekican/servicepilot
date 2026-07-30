@@ -5,6 +5,7 @@ using ServicePilot.Application.Authentication.AcceptInvitation;
 using ServicePilot.Application.Authentication.Login;
 using ServicePilot.Application.Authentication.Register;
 using ServicePilot.Application.Customers;
+using ServicePilot.Application.Dashboard;
 using ServicePilot.Application.Organizations.CreateOrganization;
 using ServicePilot.Application.Reminders;
 using ServicePilot.Application.Services;
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<CustomerManagementService>();
         services.AddScoped<ServiceCatalogService>();
         services.AddScoped<AppointmentService>();
+        services.AddScoped<DashboardService>();
         services.AddScoped<ReminderManagementService>();
         services.AddScoped<ReminderProcessor>();
 

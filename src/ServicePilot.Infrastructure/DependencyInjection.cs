@@ -8,18 +8,22 @@ using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Appointments;
 using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Customers;
+using ServicePilot.Application.Dashboard;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Reminders;
+using ServicePilot.Application.Retention;
 using ServicePilot.Application.Services;
 using ServicePilot.Application.Users;
 using ServicePilot.Infrastructure.Appointments;
 using ServicePilot.Infrastructure.Auditing;
 using ServicePilot.Infrastructure.Authentication;
 using ServicePilot.Infrastructure.Customers;
+using ServicePilot.Infrastructure.Dashboard;
 using ServicePilot.Infrastructure.Email;
 using ServicePilot.Infrastructure.Organizations;
 using ServicePilot.Infrastructure.Persistence;
 using ServicePilot.Infrastructure.Reminders;
+using ServicePilot.Infrastructure.Retention;
 using ServicePilot.Infrastructure.Services;
 using ServicePilot.Infrastructure.Users;
 
@@ -57,6 +61,10 @@ public static class DependencyInjection
             AppointmentRepository>();
         services.AddScoped<IReminderRepository,
             ReminderRepository>();
+        services.AddScoped<IDashboardRepository,
+            DashboardRepository>();
+        services.AddScoped<IRetentionService,
+            RetentionService>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
