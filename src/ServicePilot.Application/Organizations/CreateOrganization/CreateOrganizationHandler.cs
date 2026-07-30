@@ -14,7 +14,7 @@ public sealed class CreateOrganizationHandler
 
     public CreateOrganizationHandler(
         IOrganizationRepository organizationRepository,
-        IUnitOfWork unitOfWork , 
+        IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
         _organizationRepository = organizationRepository;
@@ -47,7 +47,7 @@ public sealed class CreateOrganizationHandler
                 OrganizationErrors.InvalidSlug);
         }
 
-        bool slugExists = 
+        bool slugExists =
             await _organizationRepository.SlugExistsAsync(
                 slug,
                 cancellationToken);
@@ -56,13 +56,13 @@ public sealed class CreateOrganizationHandler
             return Result<CreateOrganizationResponse>.Failure(
                 OrganizationErrors.SlugAlreadyExists);
         }
-        DateTimeOffset createdAtUtc = 
+        DateTimeOffset createdAtUtc =
             _timeProvider.GetUtcNow();
-        
+
         Organization organization = new(
             Guid.NewGuid(),
-            name, 
-            slug ,        
+            name,
+            slug,
             createdAtUtc);
 
         _organizationRepository.Add(organization);
@@ -77,5 +77,5 @@ public sealed class CreateOrganizationHandler
         );
 
         return Result<CreateOrganizationResponse>.Success(response);
-    } 
+    }
 }

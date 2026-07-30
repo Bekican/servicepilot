@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+
 using ServicePilot.Application.Organizations.CreateOrganization;
 
 namespace ServicePilot.Application;

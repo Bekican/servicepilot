@@ -5,5 +5,3 @@ public sealed record CreateOrganizationResponse(
     string Name,
     string Slug,
     DateTimeOffset CreatedAtUtc);
-
-    

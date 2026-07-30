@@ -1,10 +1,15 @@
+using ServicePilot.Application;
+using ServicePilot.Application.Organizations.CreateOrganization;
 using ServicePilot.Infrastructure;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddScoped<CreateOrganizationHandler>();
+builder.Services.AddSingleton(TimeProvider.System);
 
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 WebApplication app = builder.Build();

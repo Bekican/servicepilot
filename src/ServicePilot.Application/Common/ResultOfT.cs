@@ -8,7 +8,7 @@ public sealed class Result<TValue> : Result
         TValue? value,
         bool isSuccess,
         Error error)
-        : base(isSuccess , error)
+        : base(isSuccess, error)
     {
         _value = value;
     }

@@ -2,15 +2,15 @@ namespace ServicePilot.Application.Common;
 
 public class Result
 {
-    protected Result(bool isSuccess,Error error)
+    protected Result(bool isSuccess, Error error)
     {
-        if(isSuccess && error != Error.None)
+        if (isSuccess && error != Error.None)
         {
             throw new InvalidOperationException(
                 "A successful result cannot contain an error");
         }
 
-        if(!isSuccess && error == Error.None)
+        if (!isSuccess && error == Error.None)
         {
             throw new InvalidOperationException(
                 "A failed result must contain an error");
@@ -19,18 +19,18 @@ public class Result
         Error = error;
     }
 
-    public bool IsSuccess{get;}
+    public bool IsSuccess { get; }
 
     public bool IsFailure => !IsSuccess;
 
-    public Error Error{get; }
+    public Error Error { get; }
 
     public static Result Success()
     {
-        return new Result(true,Error.None);
+        return new Result(true, Error.None);
     }
     public static Result Failure(Error error)
     {
-        return new Result(false,error);
+        return new Result(false, error);
     }
 }
