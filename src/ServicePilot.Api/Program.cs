@@ -10,6 +10,7 @@ using ServicePilot.Application;
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Tenancy;
 using ServicePilot.Application.Authentication;
+using ServicePilot.Domain.Users;
 using ServicePilot.Infrastructure;
 using ServicePilot.Infrastructure.Authentication;
 
@@ -31,10 +32,32 @@ builder.Services.AddAuthorization(options =>
             policy.AddRequirements(
                 new ActiveOwnerRequirement());
         });
+    options.AddPolicy(
+        AuthorizationPolicies.ActiveUser,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.AddRequirements(
+                new ActiveRoleRequirement());
+        });
+    options.AddPolicy(
+        AuthorizationPolicies.CustomerWrite,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.AddRequirements(
+                new ActiveRoleRequirement(
+                    UserRoles.Owner,
+                    UserRoles.Admin,
+                    UserRoles.Dispatcher));
+        });
 });
 builder.Services.AddScoped<
     IAuthorizationHandler,
     ActiveOwnerAuthorizationHandler>();
+builder.Services.AddScoped<
+    IAuthorizationHandler,
+    ActiveRoleAuthorizationHandler>();
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddScoped<HttpTenantContext>();
 builder.Services.AddScoped<ITenantContext>(

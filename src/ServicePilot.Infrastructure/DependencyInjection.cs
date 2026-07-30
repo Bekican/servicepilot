@@ -43,6 +43,8 @@ public static class DependencyInjection
             AuditLogRepository>();
         services.AddScoped<ICustomerNumberGenerator,
             CustomerNumberGenerator>();
+        services.AddScoped<ICustomerRepository,
+            CustomerRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<

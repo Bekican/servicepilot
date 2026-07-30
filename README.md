@@ -86,6 +86,10 @@ Implemented:
 - Self-modification and last-active-Owner protection
 - Immutable user lifecycle audit events
 - Active-Owner authorization against current database state
+- Hybrid Individual/Company customers with soft deactivation
+- Tenant-scoped customer email and E.164 phone uniqueness
+- Concurrency-safe `CUS-000001` customer numbering
+- Optional multiple addresses with one active primary address
 
 Not yet implemented:
 
@@ -150,3 +154,6 @@ GET   /api/users
 PATCH /api/users/{id}/role
 PATCH /api/users/{id}/status
 ```
+
+Customer endpoints are available under `/api/customers`, including create,
+list, detail, update, deactivate and nested address lifecycle operations.

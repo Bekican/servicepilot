@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ServicePilot.Application.Authentication.AcceptInvitation;
 using ServicePilot.Application.Authentication.Login;
 using ServicePilot.Application.Authentication.Register;
+using ServicePilot.Application.Customers;
 using ServicePilot.Application.Organizations.CreateOrganization;
 using ServicePilot.Application.Users.Invitations.CreateInvitation;
 using ServicePilot.Application.Users.Invitations.ResendInvitation;
@@ -27,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<ListUsersHandler>();
         services.AddScoped<ChangeUserRoleHandler>();
         services.AddScoped<ChangeUserStatusHandler>();
+        services.AddScoped<CustomerManagementService>();
 
         return services;
     }
