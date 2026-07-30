@@ -3,80 +3,102 @@
 ServicePilot is a multi-tenant field service management SaaS for small and
 medium-sized technical service companies.
 
-The system helps service businesses manage:
+## MVP Scope
 
-- Organizations and users
-- Customers and locations
-- Customer assets and equipment
-- Service requests
-- Work orders
-- Technician scheduling
-- Inventory movements
-- Recurring maintenance
-- Notifications
-- Audit logs
+The first demo will cover:
 
-## Primary Goal
-
-The primary goal of this project is to build a production-oriented backend
-while studying essential backend engineering concepts:
-
-- HTTP and API design
-- Relational data modelling
-- Multi-tenancy
+- Organization creation
 - Authentication and authorization
-- Transactions
-- Concurrency control
-- Database constraints
-- Caching
-- Background processing
-- Message queues
-- Idempotency
-- Observability
-- Testing
-- Performance
-- Failure handling
+- User and role management
+- Customer management
+- Service definition
+- Appointment creation and status management
+- Basic reminders and notifications
+- A simple dashboard
+- Organization-level data isolation
+
+Broader employee operations, advanced reporting, inventory, payments and
+high-scale messaging are outside the first demo unless an MVP use case requires
+them.
 
 ## Architecture
 
-The project starts as a modular monolith.
+ServicePilot starts as a modular monolith with the following dependency
+direction:
 
 ```text
 Api
-├── Application
-├── Infrastructure
-└── Contracts
+|-- Application
+|-- Infrastructure
+`-- Contracts
 
 Worker
-├── Application
-└── Infrastructure
+|-- Application
+`-- Infrastructure
 
 Infrastructure
-├── Application
-└── Domain
+|-- Application
+`-- Domain
 
 Application
-└── Domain
+`-- Domain
 
 Domain
-└── No project dependency
+`-- No project dependency
+```
 
+The API and Worker are separate processes. Business capabilities remain inside
+one codebase and share PostgreSQL while module boundaries are kept explicit.
 
+## Current Technology
 
-Technology Stack
-.NET
-ASP.NET Core
-PostgreSQL
-Entity Framework Core
-Redis
-RabbitMQ
-Docker Compose
-OpenTelemetry
-Prometheus
-Grafana
-xUnit
-Testcontainers
-k6
-Current Status
+- .NET 10
+- ASP.NET Core
+- PostgreSQL
+- Entity Framework Core
+- Docker
+- xUnit
+- Testcontainers
 
-The project is under active development.
+Redis, message brokers and observability tools will be introduced only when a
+concrete use case justifies their operational cost.
+
+## Current Status
+
+Implemented:
+
+- Organization domain and persistence model
+- `POST /api/organizations`
+- Application validation and slug normalization
+- Application pre-check plus PostgreSQL unique constraint for organization
+  slug consistency
+- Unit and PostgreSQL integration tests, including concurrent requests
+- Employee domain and persistence groundwork
+- Organization Owner registration
+- Tenant-scoped user authentication with JWT access tokens
+- Framework password hashing
+- Authenticated tenant context from the `organization_id` claim
+
+Not yet implemented:
+
+- Employee application use cases and API endpoints
+- User management beyond the initial Owner account
+- Permission policies beyond fixed role claims
+- The remaining MVP vertical slices
+
+## Engineering Goals
+
+The project is also used to study:
+
+- Modular monolith boundaries
+- Multi-tenancy
+- Authentication and authorization
+- Transactions and concurrency
+- Database constraints and indexing
+- Idempotency and failure handling
+- Background processing
+- Integration testing
+- Observability and performance
+
+Architecture decisions are recorded under
+[`docs/architecture/decisions`](docs/architecture/decisions).

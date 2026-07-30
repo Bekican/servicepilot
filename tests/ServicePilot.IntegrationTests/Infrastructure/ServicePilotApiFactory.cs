@@ -27,6 +27,9 @@ public sealed class ServicePilotApiFactory
         builder.UseSetting(
             "ConnectionStrings:Database",
             _postgresContainer.GetConnectionString());
+        builder.UseSetting(
+            "Jwt:SigningKey",
+            "servicepilot-integration-test-signing-key-never-use-in-production");
 
         builder.ConfigureServices(services =>
         {

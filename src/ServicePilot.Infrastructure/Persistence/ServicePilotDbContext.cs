@@ -6,6 +6,7 @@ using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Domain.Employees;
 using ServicePilot.Domain.Organizations;
+using ServicePilot.Domain.Users;
 
 namespace ServicePilot.Infrastructure.Persistence;
 
@@ -15,6 +16,7 @@ public sealed class ServicePilotDbContext(
 {
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Organization> Organizations => Set<Organization>();
+    public DbSet<User> Users => Set<User>();
 
     public override async Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default

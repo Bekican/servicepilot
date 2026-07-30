@@ -2,10 +2,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Organizations;
+using ServicePilot.Application.Users;
+using ServicePilot.Infrastructure.Authentication;
 using ServicePilot.Infrastructure.Organizations;
 using ServicePilot.Infrastructure.Persistence;
+using ServicePilot.Infrastructure.Users;
 
 namespace ServicePilot.Infrastructure;
 
@@ -25,10 +29,16 @@ public static class DependencyInjection
         });
         services.AddScoped<IOrganizationRepository,
             OrganizationRepository>();
+        services.AddScoped<IUserRepository,
+            UserRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
                 ServicePilotDbContext>());
+        services.AddSingleton<IPasswordHasher,
+            AspNetPasswordHasher>();
+        services.AddSingleton<IAccessTokenProvider,
+            JwtAccessTokenProvider>();
         return services;
 
     }

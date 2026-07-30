@@ -11,6 +11,17 @@ internal sealed class FakeOrganizationRepository
     public IReadOnlyCollection<Organization> Organizations =>
         _organizations.AsReadOnly();
 
+    public Task<Organization?> GetBySlugAsync(
+        string slug,
+        CancellationToken cancellationToken = default)
+    {
+        Organization? organization =
+            _organizations.SingleOrDefault(
+                candidate => candidate.Slug == slug);
+
+        return Task.FromResult(organization);
+    }
+
     public Task<bool> SlugExistsAsync(
         string slug,
         CancellationToken cancellationToken = default)

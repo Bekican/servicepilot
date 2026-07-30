@@ -1,4 +1,4 @@
-namespace ServicePilot.Abstraction.Tenancy;
+namespace ServicePilot.Application.Abstractions.Tenancy;
 
 public interface ITenantContext
 {
