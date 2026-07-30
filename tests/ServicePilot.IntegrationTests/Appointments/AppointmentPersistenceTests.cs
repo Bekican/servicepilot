@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
+using ServicePilot.Contracts.Appointments;
 using ServicePilot.Contracts.Authentication;
 using ServicePilot.Contracts.Customers;
 using ServicePilot.Contracts.Services;
@@ -61,6 +62,77 @@ public sealed class AppointmentPersistenceTests
         Assert.Equal(
             "ex_appointments_technician_overlap",
             exception.ConstraintName);
+    }
+
+    [Fact]
+    public async Task Api_ShouldRequireOffset_AndTechnicianBeforeConfirmation()
+    {
+        AppointmentDependencies dependencies =
+            await CreateDependenciesAsync();
+
+        using HttpRequestMessage invalidRequest = new(
+            HttpMethod.Post,
+            "/api/appointments");
+        invalidRequest.Headers.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                dependencies.AccessToken);
+        invalidRequest.Content = JsonContent.Create(
+            new CreateAppointmentRequest(
+                dependencies.CustomerId,
+                dependencies.ServiceId,
+                null,
+                "2030-01-01T10:00:00",
+                "2030-01-01T11:00:00"));
+
+        HttpResponseMessage invalidResponse =
+            await _client.SendAsync(invalidRequest);
+        Assert.Equal(
+            System.Net.HttpStatusCode.BadRequest,
+            invalidResponse.StatusCode);
+
+        using HttpRequestMessage createRequest = new(
+            HttpMethod.Post,
+            "/api/appointments");
+        createRequest.Headers.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                dependencies.AccessToken);
+        createRequest.Content = JsonContent.Create(
+            new CreateAppointmentRequest(
+                dependencies.CustomerId,
+                dependencies.ServiceId,
+                null,
+                "2030-01-01T10:00:00+03:00",
+                "2030-01-01T11:00:00+03:00"));
+
+        HttpResponseMessage createResponse =
+            await _client.SendAsync(createRequest);
+        Assert.Equal(
+            System.Net.HttpStatusCode.Created,
+            createResponse.StatusCode);
+        ServicePilot.Contracts.Appointments.AppointmentResponse?
+            appointment =
+            await createResponse.Content.ReadFromJsonAsync<
+                ServicePilot.Contracts.Appointments
+                    .AppointmentResponse>();
+        Assert.NotNull(appointment);
+
+        using HttpRequestMessage confirmRequest = new(
+            HttpMethod.Patch,
+            $"/api/appointments/{appointment.Id}/status");
+        confirmRequest.Headers.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                dependencies.AccessToken);
+        confirmRequest.Content = JsonContent.Create(
+            new AppointmentStatusRequest("Confirmed"));
+
+        HttpResponseMessage confirmResponse =
+            await _client.SendAsync(confirmRequest);
+        Assert.Equal(
+            System.Net.HttpStatusCode.BadRequest,
+            confirmResponse.StatusCode);
     }
 
     private static Appointment CreateAppointment(
@@ -130,7 +202,8 @@ public sealed class AppointmentPersistenceTests
             owner.OrganizationId,
             customer.Id,
             service.Id,
-            owner.UserId);
+            owner.UserId,
+            owner.AccessToken);
     }
 
     private async Task<AuthenticationTokenResponse>
@@ -161,5 +234,6 @@ public sealed class AppointmentPersistenceTests
         Guid OrganizationId,
         Guid CustomerId,
         Guid ServiceId,
-        Guid TechnicianUserId);
+        Guid TechnicianUserId,
+        string AccessToken);
 }

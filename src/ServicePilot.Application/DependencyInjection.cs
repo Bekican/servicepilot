@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
+using ServicePilot.Application.Appointments;
 using ServicePilot.Application.Authentication.AcceptInvitation;
 using ServicePilot.Application.Authentication.Login;
 using ServicePilot.Application.Authentication.Register;
@@ -31,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<ChangeUserStatusHandler>();
         services.AddScoped<CustomerManagementService>();
         services.AddScoped<ServiceCatalogService>();
+        services.AddScoped<AppointmentService>();
 
         return services;
     }

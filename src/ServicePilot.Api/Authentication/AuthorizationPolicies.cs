@@ -6,4 +6,6 @@ internal static class AuthorizationPolicies
     public const string ActiveUser = "ActiveUser";
     public const string CustomerWrite = "CustomerWrite";
     public const string ServiceWrite = "ServiceWrite";
+    public const string AppointmentManage =
+        "AppointmentManage";
 }

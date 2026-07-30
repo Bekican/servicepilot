@@ -5,11 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
+using ServicePilot.Application.Appointments;
 using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Customers;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Services;
 using ServicePilot.Application.Users;
+using ServicePilot.Infrastructure.Appointments;
 using ServicePilot.Infrastructure.Auditing;
 using ServicePilot.Infrastructure.Authentication;
 using ServicePilot.Infrastructure.Customers;
@@ -49,6 +51,8 @@ public static class DependencyInjection
             CustomerRepository>();
         services.AddScoped<IServiceCatalogRepository,
             ServiceCatalogRepository>();
+        services.AddScoped<IAppointmentRepository,
+            AppointmentRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<

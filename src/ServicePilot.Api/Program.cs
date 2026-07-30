@@ -61,6 +61,17 @@ builder.Services.AddAuthorization(options =>
                     UserRoles.Owner,
                     UserRoles.Admin));
         });
+    options.AddPolicy(
+        AuthorizationPolicies.AppointmentManage,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.AddRequirements(
+                new ActiveRoleRequirement(
+                    UserRoles.Owner,
+                    UserRoles.Admin,
+                    UserRoles.Dispatcher));
+        });
 });
 builder.Services.AddScoped<
     IAuthorizationHandler,

@@ -91,13 +91,16 @@ Implemented:
 - Concurrency-safe `CUS-000001` customer numbering
 - Optional multiple addresses with one active primary address
 - Tenant-scoped service catalog with default duration and active status
+- Tenant-scoped appointment creation, listing, assignment and state transitions
+- Offset-aware appointment input with UTC persistence
+- Application overlap pre-check and PostgreSQL exclusion constraint
 
 Not yet implemented:
 
 - Employee application use cases and API endpoints
-- User management beyond the initial Owner account
-- Permission policies beyond fixed role claims
-- The remaining MVP vertical slices
+- Durable reminder processing
+- Dashboard and retention jobs
+- Demo hardening
 
 ## Engineering Goals
 
@@ -158,3 +161,15 @@ PATCH /api/users/{id}/status
 
 Customer endpoints are available under `/api/customers`, including create,
 list, detail, update, deactivate and nested address lifecycle operations.
+
+Service catalog endpoints are available under `/api/services`.
+
+Appointment endpoints:
+
+```text
+POST  /api/appointments
+GET   /api/appointments
+GET   /api/appointments/{id}
+PATCH /api/appointments/{id}/technician
+PATCH /api/appointments/{id}/status
+```
