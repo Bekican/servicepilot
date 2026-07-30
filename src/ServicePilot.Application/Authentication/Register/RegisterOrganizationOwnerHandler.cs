@@ -1,10 +1,12 @@
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
+using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Organizations.CreateOrganization;
 using ServicePilot.Application.Users;
+using ServicePilot.Domain.Auditing;
 using ServicePilot.Domain.Organizations;
 using ServicePilot.Domain.Users;
 
@@ -15,6 +17,7 @@ public sealed class RegisterOrganizationOwnerHandler(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
     IAccessTokenProvider accessTokenProvider,
+    IAuditLogRepository auditLogRepository,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -83,6 +86,14 @@ public sealed class RegisterOrganizationOwnerHandler(
 
         organizationRepository.Add(organization);
         userRepository.Add(owner);
+        auditLogRepository.Add(new AuditLog(
+            Guid.NewGuid(),
+            organization.Id,
+            owner.Id,
+            AuditLogActions.OwnerRegistered,
+            nameof(User),
+            owner.Id,
+            createdAtUtc));
 
         try
         {

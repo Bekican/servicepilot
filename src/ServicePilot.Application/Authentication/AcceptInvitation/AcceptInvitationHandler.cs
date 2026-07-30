@@ -1,9 +1,11 @@
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
+using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Users;
 using ServicePilot.Application.Users.Invitations;
+using ServicePilot.Domain.Auditing;
 using ServicePilot.Domain.Users;
 
 namespace ServicePilot.Application.Authentication.AcceptInvitation;
@@ -14,6 +16,7 @@ public sealed class AcceptInvitationHandler(
     IInvitationTokenService tokenService,
     IPasswordHasher passwordHasher,
     IAccessTokenProvider accessTokenProvider,
+    IAuditLogRepository auditLogRepository,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -76,6 +79,14 @@ public sealed class AcceptInvitationHandler(
 
         invitation.MarkAccepted(nowUtc);
         userRepository.Add(user);
+        auditLogRepository.Add(new AuditLog(
+            Guid.NewGuid(),
+            user.OrganizationId,
+            user.Id,
+            AuditLogActions.InvitationAccepted,
+            nameof(UserInvitation),
+            invitation.Id,
+            nowUtc));
 
         try
         {

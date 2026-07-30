@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+
+using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Tenancy;
 using ServicePilot.Application.Authentication;
 
@@ -5,28 +8,46 @@ namespace ServicePilot.Api.Authentication;
 
 internal sealed class HttpTenantContext(
     IHttpContextAccessor httpContextAccessor)
-    : ITenantContext
+    : ITenantContext, ICurrentUserContext
 {
+    public Guid UserId =>
+        GetRequiredGuidClaim(
+            JwtRegisteredClaimNames.Sub,
+            "user");
+
     public Guid OrganizationId
     {
-        get
+        get => GetRequiredGuidClaim(
+            AuthenticationClaimNames.OrganizationId,
+            "organization");
+    }
+
+    public string Role =>
+        httpContextAccessor.HttpContext?
+            .User
+            .FindFirst(AuthenticationClaimNames.Role)?
+            .Value
+        ?? throw new InvalidOperationException(
+            "Authenticated request does not contain a role");
+
+    private Guid GetRequiredGuidClaim(
+        string claimName,
+        string claimDescription)
+    {
+        string? claimValue =
+            httpContextAccessor.HttpContext?
+                .User
+                .FindFirst(claimName)?
+                .Value;
+
+        if (!Guid.TryParse(
+            claimValue,
+            out Guid identifier))
         {
-            string? organizationIdValue =
-                httpContextAccessor.HttpContext?
-                    .User
-                    .FindFirst(
-                        AuthenticationClaimNames.OrganizationId)?
-                    .Value;
-
-            if (!Guid.TryParse(
-                organizationIdValue,
-                out Guid organizationId))
-            {
-                throw new InvalidOperationException(
-                    "Authenticated request does not contain a valid organization identifier");
-            }
-
-            return organizationId;
+            throw new InvalidOperationException(
+                $"Authenticated request does not contain a valid {claimDescription} identifier");
         }
+
+        return identifier;
     }
 }

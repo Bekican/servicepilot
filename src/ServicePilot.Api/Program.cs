@@ -2,10 +2,12 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 
 using ServicePilot.Api.Authentication;
 using ServicePilot.Application;
+using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Tenancy;
 using ServicePilot.Application.Authentication;
 using ServicePilot.Infrastructure;
@@ -19,9 +21,30 @@ JwtOptions jwtOptions =
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        AuthorizationPolicies.ActiveOwner,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.AddRequirements(
+                new ActiveOwnerRequirement());
+        });
+});
+builder.Services.AddScoped<
+    IAuthorizationHandler,
+    ActiveOwnerAuthorizationHandler>();
 builder.Services.AddSingleton(jwtOptions);
-builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
+builder.Services.AddScoped<HttpTenantContext>();
+builder.Services.AddScoped<ITenantContext>(
+    serviceProvider =>
+        serviceProvider.GetRequiredService<
+            HttpTenantContext>());
+builder.Services.AddScoped<ICurrentUserContext>(
+    serviceProvider =>
+        serviceProvider.GetRequiredService<
+            HttpTenantContext>());
 
 builder.Services
     .AddAuthentication(

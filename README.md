@@ -82,6 +82,10 @@ Implemented:
 - SHA-256 invitation token persistence without raw tokens
 - SMTP email delivery through `IEmailSender`
 - Local email inspection through Mailpit
+- Owner-only user listing, role changes and activation/deactivation
+- Self-modification and last-active-Owner protection
+- Immutable user lifecycle audit events
+- Active-Owner authorization against current database state
 
 Not yet implemented:
 
@@ -137,4 +141,12 @@ Invitation endpoints:
 POST /api/users/invitations
 POST /api/users/invitations/{id}/resend
 POST /api/auth/invitations/accept
+```
+
+User management endpoints:
+
+```text
+GET   /api/users
+PATCH /api/users/{id}/role
+PATCH /api/users/{id}/status
 ```

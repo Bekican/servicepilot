@@ -1,17 +1,17 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using ServicePilot.Api.Authentication;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Users.Invitations;
 using ServicePilot.Application.Users.Invitations.CreateInvitation;
 using ServicePilot.Application.Users.Invitations.ResendInvitation;
 using ServicePilot.Contracts.Users.Invitations;
-using ServicePilot.Domain.Users;
 
 namespace ServicePilot.Api.Controllers;
 
 [ApiController]
-[Authorize(Roles = UserRoles.Owner)]
+[Authorize(Policy = AuthorizationPolicies.ActiveOwner)]
 [Route("api/users/invitations")]
 public sealed class UserInvitationsController(
     CreateInvitationHandler createHandler,

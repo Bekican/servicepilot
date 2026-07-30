@@ -5,8 +5,10 @@ using Microsoft.Extensions.DependencyInjection;
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
+using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Users;
+using ServicePilot.Infrastructure.Auditing;
 using ServicePilot.Infrastructure.Authentication;
 using ServicePilot.Infrastructure.Email;
 using ServicePilot.Infrastructure.Organizations;
@@ -35,6 +37,8 @@ public static class DependencyInjection
             UserRepository>();
         services.AddScoped<IUserInvitationRepository,
             UserInvitationRepository>();
+        services.AddScoped<IAuditLogRepository,
+            AuditLogRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<

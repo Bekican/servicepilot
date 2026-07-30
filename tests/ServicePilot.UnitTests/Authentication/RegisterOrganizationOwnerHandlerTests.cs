@@ -26,6 +26,7 @@ public sealed class RegisterOrganizationOwnerHandlerTests
             userRepository,
             passwordHasher,
             accessTokenProvider,
+            new FakeAuditLogRepository(),
             unitOfWork,
             timeProvider);
 
@@ -79,6 +80,7 @@ public sealed class RegisterOrganizationOwnerHandlerTests
             new FakePasswordHasher(),
             new FakeAccessTokenProvider(
                 UtcNow.AddHours(1)),
+            new FakeAuditLogRepository(),
             unitOfWork,
             new FakeTimeProvider(UtcNow));
 
@@ -113,6 +115,7 @@ public sealed class RegisterOrganizationOwnerHandlerTests
             new FakePasswordHasher(),
             new FakeAccessTokenProvider(
                 UtcNow.AddHours(1)),
+            new FakeAuditLogRepository(),
             unitOfWork,
             new FakeTimeProvider(UtcNow));
 

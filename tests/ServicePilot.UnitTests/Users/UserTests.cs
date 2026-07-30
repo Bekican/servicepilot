@@ -45,6 +45,27 @@ public sealed class UserTests
     }
 
     [Fact]
+    public void Activate_ShouldMakeUserActive()
+    {
+        User user = CreateUser();
+        user.Deactivate();
+
+        user.Activate();
+
+        Assert.True(user.IsActive);
+    }
+
+    [Fact]
+    public void ChangeRole_ShouldUpdateSupportedRole()
+    {
+        User user = CreateUser();
+
+        user.ChangeRole(UserRoles.Dispatcher);
+
+        Assert.Equal(UserRoles.Dispatcher, user.Role);
+    }
+
+    [Fact]
     public void Constructor_ShouldThrow_WhenRoleIsUnsupported()
     {
         Assert.Throws<ArgumentException>(() =>

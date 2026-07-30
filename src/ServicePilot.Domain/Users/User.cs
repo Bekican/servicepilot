@@ -124,4 +124,21 @@ public sealed class User
     {
         IsActive = false;
     }
+
+    public void Activate()
+    {
+        IsActive = true;
+    }
+
+    public void ChangeRole(string role)
+    {
+        if (!UserRoles.IsSupported(role))
+        {
+            throw new ArgumentException(
+                "User role is not supported",
+                nameof(role));
+        }
+
+        Role = role;
+    }
 }

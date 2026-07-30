@@ -11,4 +11,16 @@ public static class UserRoles
     {
         return role is Owner or Admin or Dispatcher or Technician;
     }
+
+    public static string? Normalize(string role)
+    {
+        return role.Trim().ToLowerInvariant() switch
+        {
+            "owner" => Owner,
+            "admin" => Admin,
+            "dispatcher" => Dispatcher,
+            "technician" => Technician,
+            _ => null
+        };
+    }
 }

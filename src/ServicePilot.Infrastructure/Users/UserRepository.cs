@@ -24,6 +24,44 @@ internal sealed class UserRepository(
                 cancellationToken);
     }
 
+    public Task<User?> GetByIdAsync(
+        Guid organizationId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return dbContext.Users
+            .SingleOrDefaultAsync(
+                user =>
+                    user.OrganizationId == organizationId
+                    && user.Id == userId,
+                cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<User>> ListAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default)
+    {
+        return await dbContext.Users
+            .AsNoTracking()
+            .Where(user =>
+                user.OrganizationId == organizationId)
+            .OrderBy(user => user.CreatedAtUtc)
+            .ThenBy(user => user.Id)
+            .ToArrayAsync(cancellationToken);
+    }
+
+    public Task<int> CountActiveOwnersAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default)
+    {
+        return dbContext.Users.CountAsync(
+            user =>
+                user.OrganizationId == organizationId
+                && user.Role == UserRoles.Owner
+                && user.IsActive,
+            cancellationToken);
+    }
+
     public void Add(User user)
     {
         dbContext.Users.Add(user);

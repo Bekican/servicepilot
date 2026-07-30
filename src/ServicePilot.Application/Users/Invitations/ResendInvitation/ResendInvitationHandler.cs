@@ -3,18 +3,22 @@ using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Application.Abstractions.Tenancy;
+using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Common;
+using ServicePilot.Domain.Auditing;
 using ServicePilot.Domain.Users;
 
 namespace ServicePilot.Application.Users.Invitations.ResendInvitation;
 
 public sealed class ResendInvitationHandler(
     ITenantContext tenantContext,
+    ICurrentUserContext currentUser,
     IUserRepository userRepository,
     IUserInvitationRepository invitationRepository,
     IInvitationTokenService tokenService,
     IInvitationLinkBuilder linkBuilder,
     IEmailSender emailSender,
+    IAuditLogRepository auditLogRepository,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -63,6 +67,15 @@ public sealed class ResendInvitationHandler(
             token.Hash,
             issuedAtUtc,
             expiresAtUtc);
+
+        auditLogRepository.Add(new AuditLog(
+            Guid.NewGuid(),
+            tenantContext.OrganizationId,
+            currentUser.UserId,
+            AuditLogActions.InvitationResent,
+            nameof(UserInvitation),
+            invitation.Id,
+            issuedAtUtc));
 
         try
         {

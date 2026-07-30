@@ -3,19 +3,23 @@ using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Application.Abstractions.Tenancy;
+using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Authentication;
 using ServicePilot.Application.Common;
+using ServicePilot.Domain.Auditing;
 using ServicePilot.Domain.Users;
 
 namespace ServicePilot.Application.Users.Invitations.CreateInvitation;
 
 public sealed class CreateInvitationHandler(
     ITenantContext tenantContext,
+    ICurrentUserContext currentUser,
     IUserRepository userRepository,
     IUserInvitationRepository invitationRepository,
     IInvitationTokenService tokenService,
     IInvitationLinkBuilder linkBuilder,
     IEmailSender emailSender,
+    IAuditLogRepository auditLogRepository,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -62,6 +66,8 @@ public sealed class CreateInvitationHandler(
                 email,
                 cancellationToken);
 
+        string auditAction;
+
         if (invitation is null)
         {
             invitation = new UserInvitation(
@@ -74,6 +80,8 @@ public sealed class CreateInvitationHandler(
                 expiresAtUtc);
 
             invitationRepository.Add(invitation);
+            auditAction =
+                AuditLogActions.InvitationCreated;
         }
         else
         {
@@ -82,7 +90,18 @@ public sealed class CreateInvitationHandler(
                 token.Hash,
                 issuedAtUtc,
                 expiresAtUtc);
+            auditAction =
+                AuditLogActions.InvitationResent;
         }
+
+        auditLogRepository.Add(new AuditLog(
+            Guid.NewGuid(),
+            organizationId,
+            currentUser.UserId,
+            auditAction,
+            nameof(UserInvitation),
+            invitation.Id,
+            issuedAtUtc));
 
         try
         {
