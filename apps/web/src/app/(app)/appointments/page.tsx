@@ -81,8 +81,14 @@ export default async function AppointmentsPage({
       />
 
       <form className="bg-card mb-5 grid gap-3 rounded-xl border p-4 sm:grid-cols-3 lg:grid-cols-4">
-        <Input defaultValue={query.date} name="date" type="date" />
+        <Input
+          aria-label="Randevu tarihi"
+          defaultValue={query.date}
+          name="date"
+          type="date"
+        />
         <select
+          aria-label="Randevu durumu"
           className="bg-background h-10 rounded-md border px-3 text-sm"
           defaultValue={query.status ?? ""}
           name="status"
@@ -96,6 +102,7 @@ export default async function AppointmentsPage({
         </select>
         {canManage ? (
           <select
+            aria-label="Teknisyen filtresi"
             className="bg-background h-10 rounded-md border px-3 text-sm"
             defaultValue={query.technicianId ?? ""}
             name="technicianId"

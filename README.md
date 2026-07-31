@@ -240,3 +240,25 @@ Operational endpoints:
 GET /health/live
 GET /health/ready
 ```
+
+## MVP acceptance gate
+
+The acceptance gate builds and tests the backend and frontend, checks migration
+drift, then runs the browser journey against an isolated Docker Compose stack.
+It does not read from or write to the normal demo database.
+
+Install the Chromium browser once:
+
+```powershell
+cd apps/web
+npx playwright install chromium
+```
+
+Run the complete gate from the repository root:
+
+```powershell
+.\scripts\verify-mvp.ps1
+```
+
+The isolated stack uses web `13000`, API `15267`, PostgreSQL `15432` and
+Mailpit `18025`. It is removed after the run, including when a test fails.

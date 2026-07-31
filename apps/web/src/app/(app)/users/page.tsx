@@ -2,25 +2,22 @@ import type { Metadata } from "next";
 import { MailPlus, RefreshCw, ShieldCheck } from "lucide-react";
 
 import { ActionMessage } from "@/components/shared/action-message";
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
+import { PendingButton } from "@/components/shared/pending-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  changeUserRoleAction,
   changeUserStatusAction,
-  createInvitationAction,
   resendInvitationAction,
 } from "@/features/users/actions";
+import { InvitationForm } from "@/features/users/invitation-form";
+import { UserRoleForm } from "@/features/users/user-role-form";
 import { createServerApiClient } from "@/lib/api/server-client";
 import type { Invitation, User } from "@/lib/api/types";
 import { formatDate } from "@/lib/date";
 import { requireSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Kullanıcılar" };
-
-const roles = ["Owner", "Admin", "Dispatcher", "Technician"];
 
 export default async function UsersPage({
   searchParams,
@@ -65,47 +62,36 @@ export default async function UsersPage({
                   </p>
                   <p className="text-muted-foreground text-sm">{user.email}</p>
                 </div>
-                <form
-                  action={changeUserRoleAction.bind(null, user.id)}
-                  className="flex gap-2"
-                >
-                  <select
-                    className="bg-background h-9 w-full rounded-md border px-3 text-sm"
-                    defaultValue={user.role}
+                <UserRoleForm
+                  currentRole={user.role}
+                  disabled={user.id === session.userId}
+                  userId={user.id}
+                />
+                {user.isActive ? (
+                  <ConfirmAction
+                    action={changeUserStatusAction.bind(null, user.id, false)}
+                    confirmLabel="Kullanıcıyı pasifleştir"
+                    description="Kullanıcı giriş yapamayacak; geçmiş işlem ve audit kayıtları korunacak."
                     disabled={user.id === session.userId}
-                    name="role"
+                    title="Kullanıcı pasifleştirilsin mi?"
+                    triggerLabel="Pasifleştir"
+                    triggerSize="sm"
+                    triggerVariant="outline"
+                  />
+                ) : (
+                  <form
+                    action={changeUserStatusAction.bind(null, user.id, true)}
                   >
-                    {roles.map((role) => (
-                      <option key={role}>{role}</option>
-                    ))}
-                  </select>
-                  <Button
-                    aria-label="Rolü kaydet"
-                    disabled={user.id === session.userId}
-                    size="sm"
-                    type="submit"
-                    variant="outline"
-                  >
-                    Kaydet
-                  </Button>
-                </form>
-                <form
-                  action={changeUserStatusAction.bind(
-                    null,
-                    user.id,
-                    !user.isActive,
-                  )}
-                >
-                  <Button
-                    className="w-full"
-                    disabled={user.id === session.userId}
-                    size="sm"
-                    type="submit"
-                    variant={user.isActive ? "outline" : "default"}
-                  >
-                    {user.isActive ? "Pasifleştir" : "Aktifleştir"}
-                  </Button>
-                </form>
+                    <PendingButton
+                      className="w-full"
+                      pendingLabel="İşleniyor…"
+                      size="sm"
+                      type="submit"
+                    >
+                      Aktifleştir
+                    </PendingButton>
+                  </form>
+                )}
               </div>
             ))}
           </CardContent>
@@ -120,28 +106,7 @@ export default async function UsersPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form action={createInvitationAction} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-posta</Label>
-                  <Input id="email" name="email" required type="email" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">Başlangıç rolü</Label>
-                  <select
-                    className="bg-background h-10 w-full rounded-md border px-3 text-sm"
-                    defaultValue="Technician"
-                    id="role"
-                    name="role"
-                  >
-                    {roles.map((role) => (
-                      <option key={role}>{role}</option>
-                    ))}
-                  </select>
-                </div>
-                <Button className="w-full" type="submit">
-                  Davet gönder
-                </Button>
-              </form>
+              <InvitationForm />
             </CardContent>
           </Card>
 
@@ -165,10 +130,15 @@ export default async function UsersPage({
                     action={resendInvitationAction.bind(null, invitation.id)}
                     className="mt-3"
                   >
-                    <Button size="sm" type="submit" variant="outline">
+                    <PendingButton
+                      pendingLabel="Gönderiliyor…"
+                      size="sm"
+                      type="submit"
+                      variant="outline"
+                    >
                       <RefreshCw />
                       Yeniden gönder
-                    </Button>
+                    </PendingButton>
                   </form>
                 </div>
               ))}

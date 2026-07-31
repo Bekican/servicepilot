@@ -24,7 +24,7 @@ export default function PublicLayout({
             tenant yapısı içinde yönetin.
           </p>
         </div>
-        <p className="text-sm text-white/45">ServicePilot MVP · 2026</p>
+        <p className="text-sm text-white/65">ServicePilot MVP · 2026</p>
       </section>
       <section className="flex items-center justify-center bg-[#f7f7fb] px-5 py-12">
         {children}

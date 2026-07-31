@@ -1,13 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarClock } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { FormError } from "@/components/shared/form-error";
+import { PendingButton } from "@/components/shared/pending-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Customer, Service, Technician } from "@/lib/api/types";
 import { zonedLocalDateTimeToIso } from "@/lib/date";
+import { initialActionState } from "@/lib/action-state";
 
 import { createAppointmentAction } from "./actions";
 
@@ -35,6 +38,15 @@ export function AppointmentForm({
   technicians: Technician[];
   timeZone: string;
 }) {
+  const [state, formAction] = useActionState(
+    createAppointmentAction,
+    initialActionState,
+  );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.redirectTo) router.push(state.redirectTo);
+  }, [router, state.redirectTo]);
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [startLocal, setStartLocal] = useState(initialDateTime);
   const service = services.find((item) => item.id === serviceId);
@@ -53,7 +65,13 @@ export function AppointmentForm({
   }, [duration, startLocal, timeZone]);
 
   return (
-    <form action={createAppointmentAction} className="space-y-6">
+    <form
+      action={formAction}
+      aria-describedby={state.error ? "appointment-form-error" : undefined}
+      className="space-y-6"
+      key={state.values ? JSON.stringify(state.values) : "initial"}
+    >
+      <FormError id="appointment-form-error" message={state.error} />
       <input name="startAt" type="hidden" value={instants?.startAt ?? ""} />
       <input name="endAt" type="hidden" value={instants?.endAt ?? ""} />
 
@@ -61,6 +79,7 @@ export function AppointmentForm({
         <Label htmlFor="customerId">Müşteri</Label>
         <select
           className="bg-background h-10 w-full rounded-md border px-3 text-sm"
+          defaultValue={state.values?.customerId ?? customers[0]?.id}
           id="customerId"
           name="customerId"
           required
@@ -77,6 +96,7 @@ export function AppointmentForm({
         <Label htmlFor="serviceId">Hizmet</Label>
         <select
           className="bg-background h-10 w-full rounded-md border px-3 text-sm"
+          defaultValue={state.values?.technicianUserId ?? ""}
           id="serviceId"
           name="serviceId"
           onChange={(event) => setServiceId(event.target.value)}
@@ -128,13 +148,14 @@ export function AppointmentForm({
         Tahmini süre: <strong>{duration} dakika</strong>
       </div>
 
-      <Button
+      <PendingButton
         className="w-full"
         disabled={!customers.length || !services.length || !instants}
+        pendingLabel="Oluşturuluyor…"
         type="submit"
       >
         Randevuyu oluştur
-      </Button>
+      </PendingButton>
     </form>
   );
 }

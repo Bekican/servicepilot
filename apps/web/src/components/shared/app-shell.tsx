@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetTitle,
   SheetTrigger,
@@ -85,20 +86,20 @@ export function AppShell({
     session.capabilities.includes(item.capability),
   );
 
-  const nav = (
+  const navigationLinks = (closeOnNavigate = false) => (
     <nav className="space-y-1.5 px-3">
       {visibleNavigation.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
 
-        return (
+        const link = (
           <Link
             className={cn(
               "flex h-11 items-center gap-3 rounded-lg border-l-2 px-4 text-sm font-medium transition-colors",
               active
                 ? "border-primary bg-white/6 text-white"
-                : "border-transparent text-white/55 hover:bg-white/5 hover:text-white",
+                : "border-transparent text-white/70 hover:bg-white/5 hover:text-white",
             )}
             href={item.href}
             key={item.href}
@@ -107,13 +108,20 @@ export function AppShell({
             {item.label}
           </Link>
         );
+        return closeOnNavigate ? (
+          <SheetClose asChild key={item.href}>
+            {link}
+          </SheetClose>
+        ) : (
+          link
+        );
       })}
     </nav>
   );
 
   const profile = (
     <div className="border-t border-white/10 p-4">
-      <p className="truncate text-xs text-white/45">
+      <p className="truncate text-xs text-white/65">
         {session.organizationName}
       </p>
       <div className="mt-3 flex items-center gap-3">
@@ -125,7 +133,7 @@ export function AppShell({
           <p className="truncate text-sm font-medium text-white">
             {session.firstName} {session.lastName}
           </p>
-          <p className="truncate text-xs text-white/45">{session.role}</p>
+          <p className="truncate text-xs text-white/65">{session.role}</p>
         </div>
       </div>
     </div>
@@ -141,11 +149,11 @@ export function AppShell({
           >
             ServicePilot
           </Link>
-          <p className="mt-1 text-xs font-medium tracking-[0.12em] text-white/45">
+          <p className="mt-1 text-xs font-medium tracking-[0.12em] text-white/65">
             OPERASYON MERKEZİ
           </p>
         </div>
-        <div className="flex-1">{nav}</div>
+        <div className="flex-1">{navigationLinks()}</div>
         {profile}
       </aside>
 
@@ -165,7 +173,7 @@ export function AppShell({
                 <SheetTitle className="px-7 pt-7 pb-8 text-left text-xl text-white">
                   ServicePilot
                 </SheetTitle>
-                {nav}
+                {navigationLinks(true)}
                 <div className="absolute inset-x-0 bottom-0">{profile}</div>
               </SheetContent>
             </Sheet>
@@ -190,7 +198,11 @@ export function AppShell({
             ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="gap-2" variant="ghost">
+                <Button
+                  aria-label={`Kullanıcı menüsü: ${session.firstName} ${session.lastName}`}
+                  className="gap-2"
+                  variant="ghost"
+                >
                   <span className="hidden sm:inline">{session.firstName}</span>
                   <ChevronDown className="size-4" />
                 </Button>

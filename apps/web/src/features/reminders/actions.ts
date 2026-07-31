@@ -18,5 +18,7 @@ export async function retryReminderAction(id: string) {
 
   revalidatePath("/reminders");
   revalidatePath("/dashboard");
-  redirect("/reminders?success=Hatırlatma yeniden kuyruğa alındı");
+  redirect(
+    `/reminders?success=${encodeURIComponent("Hatırlatma yeniden kuyruğa alındı")}`,
+  );
 }

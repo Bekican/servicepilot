@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { createServerApiClient } from "@/lib/api/server-client";
 import { problemMessage } from "@/lib/api/problem-details";
+import { formValues, type ActionState } from "@/lib/action-state";
 
 const optional = (value: FormDataEntryValue | null) => {
   const normalized = String(value ?? "").trim();
@@ -44,23 +45,30 @@ function customerBody(formData: FormData) {
   };
 }
 
-export async function createCustomerAction(formData: FormData) {
+export async function createCustomerAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const client = await createServerApiClient();
   const { data, error } = await client.POST("/api/customers", {
     body: customerBody(formData),
   });
 
   if (!data) {
-    redirect(
-      `/customers/new?error=${encodeURIComponent(problemMessage(error))}`,
-    );
+    return { error: problemMessage(error), values: formValues(formData) };
   }
 
   revalidatePath("/customers");
-  redirect(`/customers/${data.id}?success=Müşteri oluşturuldu`);
+  return {
+    redirectTo: `/customers/${data.id}?success=${encodeURIComponent("Müşteri oluşturuldu")}`,
+  };
 }
 
-export async function updateCustomerAction(id: string, formData: FormData) {
+export async function updateCustomerAction(
+  id: string,
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const client = await createServerApiClient();
   const { data, error } = await client.PUT("/api/customers/{id}", {
     params: { path: { id } },
@@ -68,14 +76,14 @@ export async function updateCustomerAction(id: string, formData: FormData) {
   });
 
   if (!data) {
-    redirect(
-      `/customers/${id}?error=${encodeURIComponent(problemMessage(error))}`,
-    );
+    return { error: problemMessage(error), values: formValues(formData) };
   }
 
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}`);
-  redirect(`/customers/${id}?success=Müşteri güncellendi`);
+  return {
+    redirectTo: `/customers/${id}?success=${encodeURIComponent("Müşteri güncellendi")}`,
+  };
 }
 
 export async function deactivateCustomerAction(id: string) {
@@ -95,10 +103,16 @@ export async function deactivateCustomerAction(id: string) {
 
   revalidatePath("/customers");
   revalidatePath(`/customers/${id}`);
-  redirect(`/customers/${id}?success=Müşteri pasifleştirildi`);
+  redirect(
+    `/customers/${id}?success=${encodeURIComponent("Müşteri pasifleştirildi")}`,
+  );
 }
 
-export async function addAddressAction(customerId: string, formData: FormData) {
+export async function addAddressAction(
+  customerId: string,
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const client = await createServerApiClient();
   const { data, error } = await client.POST(
     "/api/customers/{customerId}/addresses",
@@ -118,13 +132,13 @@ export async function addAddressAction(customerId: string, formData: FormData) {
   );
 
   if (!data) {
-    redirect(
-      `/customers/${customerId}?error=${encodeURIComponent(problemMessage(error))}`,
-    );
+    return { error: problemMessage(error), values: formValues(formData) };
   }
 
   revalidatePath(`/customers/${customerId}`);
-  redirect(`/customers/${customerId}?success=Adres eklendi`);
+  return {
+    redirectTo: `/customers/${customerId}?success=${encodeURIComponent("Adres eklendi")}`,
+  };
 }
 
 export async function setPrimaryAddressAction(

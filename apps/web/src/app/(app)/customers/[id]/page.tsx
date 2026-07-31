@@ -3,18 +3,17 @@ import { notFound } from "next/navigation";
 import { MapPin } from "lucide-react";
 
 import { ActionMessage } from "@/components/shared/action-message";
+import { ConfirmAction } from "@/components/shared/confirm-action";
+import { PendingButton } from "@/components/shared/pending-button";
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-  addAddressAction,
   deactivateAddressAction,
   deactivateCustomerAction,
   setPrimaryAddressAction,
   updateCustomerAction,
 } from "@/features/customers/actions";
+import { AddressForm } from "@/features/customers/address-form";
 import { CustomerForm } from "@/features/customers/customer-form";
 import { createServerApiClient } from "@/lib/api/server-client";
 import type { Customer } from "@/lib/api/types";
@@ -46,11 +45,13 @@ export default async function CustomerDetailPage({
       <PageHeader
         action={
           canWrite && customer.isActive ? (
-            <form action={deactivateCustomerAction.bind(null, id)}>
-              <Button type="submit" variant="destructive">
-                Pasifleştir
-              </Button>
-            </form>
+            <ConfirmAction
+              action={deactivateCustomerAction.bind(null, id)}
+              confirmLabel="Müşteriyi pasifleştir"
+              description="Müşteri yeni işlemlerde kullanılamayacak; geçmiş randevu ve servis kayıtları korunacak."
+              title="Müşteri pasifleştirilsin mi?"
+              triggerLabel="Pasifleştir"
+            />
           ) : null
         }
         description={`${customer.customerNumber} · ${
@@ -122,26 +123,29 @@ export default async function CustomerDetailPage({
                                   address.id,
                                 )}
                               >
-                                <Button
+                                <PendingButton
+                                  pendingLabel="İşleniyor…"
                                   size="sm"
                                   type="submit"
                                   variant="outline"
                                 >
                                   Birincil yap
-                                </Button>
+                                </PendingButton>
                               </form>
                             ) : null}
-                            <form
+                            <ConfirmAction
                               action={deactivateAddressAction.bind(
                                 null,
                                 id,
                                 address.id,
                               )}
-                            >
-                              <Button size="sm" type="submit" variant="ghost">
-                                Pasifleştir
-                              </Button>
-                            </form>
+                              confirmLabel="Adresi pasifleştir"
+                              description="Adres aktif müşteri adresleri arasından kaldırılacak."
+                              title="Adres pasifleştirilsin mi?"
+                              triggerLabel="Pasifleştir"
+                              triggerSize="sm"
+                              triggerVariant="ghost"
+                            />
                           </div>
                         ) : null}
                       </div>
@@ -162,53 +166,12 @@ export default async function CustomerDetailPage({
                 <CardTitle>Adres ekle</CardTitle>
               </CardHeader>
               <CardContent>
-                <form
-                  action={addAddressAction.bind(null, id)}
-                  className="space-y-4"
-                >
-                  <AddressField
-                    label="Etiket"
-                    name="label"
-                    placeholder="Ev, İş..."
-                  />
-                  <AddressField label="Adres satırı" name="line1" required />
-                  <AddressField label="Adres satırı 2" name="line2" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <AddressField label="Şehir" name="city" required />
-                    <AddressField label="Bölge" name="region" />
-                    <AddressField label="Posta kodu" name="postalCode" />
-                    <AddressField
-                      defaultValue="TR"
-                      label="Ülke kodu"
-                      maxLength={2}
-                      name="countryCode"
-                      required
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input name="isPrimary" type="checkbox" />
-                    Birincil adres yap
-                  </label>
-                  <Button type="submit">Adresi ekle</Button>
-                </form>
+                <AddressForm customerId={id} />
               </CardContent>
             </Card>
           ) : null}
         </div>
       </div>
     </>
-  );
-}
-
-function AddressField({
-  label,
-  name,
-  ...props
-}: React.ComponentProps<typeof Input> & { label: string; name: string }) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>{label}</Label>
-      <Input id={name} name={name} {...props} />
-    </div>
   );
 }

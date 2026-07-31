@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
-import { Clock3, Wrench } from "lucide-react";
+import { Wrench } from "lucide-react";
 
 import { ActionMessage } from "@/components/shared/action-message";
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PendingButton } from "@/components/shared/pending-button";
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   createServiceAction,
   setServiceStatusAction,
   updateServiceAction,
 } from "@/features/services/actions";
+import { ServiceForm } from "@/features/services/service-form";
 import { createServerApiClient } from "@/lib/api/server-client";
 import type { Service } from "@/lib/api/types";
 import { requireSession } from "@/lib/auth/session";
@@ -46,44 +46,16 @@ export default async function ServicesPage({
           {services.map((service) => (
             <Card key={service.id}>
               <CardContent>
-                <form
+                <ServiceForm
                   action={updateServiceAction.bind(null, service.id)}
-                  className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_180px_auto]"
-                >
-                  <div className="space-y-2">
-                    <Label htmlFor={`name-${service.id}`}>Hizmet adı</Label>
-                    <Input
-                      defaultValue={service.name}
-                      disabled={!canWrite || !service.isActive}
-                      id={`name-${service.id}`}
-                      name="name"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`duration-${service.id}`}>
-                      Süre (dakika)
-                    </Label>
-                    <Input
-                      defaultValue={Number(service.defaultDurationMinutes)}
-                      disabled={!canWrite || !service.isActive}
-                      id={`duration-${service.id}`}
-                      min={5}
-                      name="defaultDurationMinutes"
-                      required
-                      type="number"
-                    />
-                  </div>
-                  {canWrite ? (
-                    <Button
-                      disabled={!service.isActive}
-                      type="submit"
-                      variant="outline"
-                    >
-                      Kaydet
-                    </Button>
-                  ) : null}
-                </form>
+                  defaultDurationMinutes={Number(
+                    service.defaultDurationMinutes,
+                  )}
+                  defaultName={service.name}
+                  disabled={!canWrite || !service.isActive}
+                  idSuffix={service.id}
+                  mode="update"
+                />
                 <div className="mt-4 flex items-center justify-between border-t pt-4">
                   <span
                     className={
@@ -95,17 +67,38 @@ export default async function ServicesPage({
                     {service.isActive ? "Aktif hizmet" : "Pasif hizmet"}
                   </span>
                   {canWrite ? (
-                    <form
-                      action={setServiceStatusAction.bind(
-                        null,
-                        service.id,
-                        !service.isActive,
-                      )}
-                    >
-                      <Button size="sm" type="submit" variant="ghost">
-                        {service.isActive ? "Pasifleştir" : "Aktifleştir"}
-                      </Button>
-                    </form>
+                    service.isActive ? (
+                      <ConfirmAction
+                        action={setServiceStatusAction.bind(
+                          null,
+                          service.id,
+                          false,
+                        )}
+                        confirmLabel="Hizmeti pasifleştir"
+                        description="Hizmet yeni randevularda seçilemeyecek; geçmiş kayıtlar korunacak."
+                        title="Hizmet pasifleştirilsin mi?"
+                        triggerLabel="Pasifleştir"
+                        triggerSize="sm"
+                        triggerVariant="ghost"
+                      />
+                    ) : (
+                      <form
+                        action={setServiceStatusAction.bind(
+                          null,
+                          service.id,
+                          true,
+                        )}
+                      >
+                        <PendingButton
+                          pendingLabel="İşleniyor…"
+                          size="sm"
+                          type="submit"
+                          variant="ghost"
+                        >
+                          Aktifleştir
+                        </PendingButton>
+                      </form>
+                    )
                   ) : null}
                 </div>
               </CardContent>
@@ -128,37 +121,7 @@ export default async function ServicesPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form action={createServiceAction} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Hizmet adı</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    placeholder="Kombi Bakımı"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="defaultDurationMinutes">
-                    Varsayılan süre
-                  </Label>
-                  <div className="relative">
-                    <Clock3 className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                    <Input
-                      className="pl-9"
-                      defaultValue={60}
-                      id="defaultDurationMinutes"
-                      min={5}
-                      name="defaultDurationMinutes"
-                      required
-                      type="number"
-                    />
-                  </div>
-                </div>
-                <Button className="w-full" type="submit">
-                  Hizmeti oluştur
-                </Button>
-              </form>
+              <ServiceForm action={createServiceAction} mode="create" />
             </CardContent>
           </Card>
         ) : null}

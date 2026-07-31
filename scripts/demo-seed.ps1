@@ -93,6 +93,14 @@ $headers = @{
     Authorization = "Bearer $($login.accessToken)"
 }
 
+# Windows PowerShell 5 reads BOM-less UTF-8 scripts with the active ANSI
+# code page. Building Turkish demo text from Unicode code points keeps the
+# seed portable across Windows PowerShell, PowerShell 7 and Linux containers.
+$dotlessI = [char]0x0131
+$sCedilla = [char]0x015F
+$oUmlaut = [char]0x00F6
+$capitalOUmlaut = [char]0x00D6
+
 $customers =
     @(
         (
@@ -107,7 +115,7 @@ $demoCustomers = @(
     @{
         type = "Individual"
         firstName = "Ahmet"
-        lastName = "Yılmaz"
+        lastName = "Y${dotlessI}lmaz"
         companyName = $null
         contactPerson = $null
         email = "ahmet.yilmaz@servicepilot.local"
@@ -115,7 +123,7 @@ $demoCustomers = @(
     },
     @{
         type = "Individual"
-        firstName = "Ayşe"
+        firstName = "Ay${sCedilla}e"
         lastName = "Demir"
         companyName = $null
         contactPerson = $null
@@ -126,8 +134,8 @@ $demoCustomers = @(
         type = "Company"
         firstName = $null
         lastName = $null
-        companyName = "Atlas Yönetim"
-        contactPerson = "Ömer Faruk"
+        companyName = "Atlas Y${oUmlaut}netim"
+        contactPerson = "${capitalOUmlaut}mer Faruk"
         email = "operasyon@atlas.example.com"
         phone = "+905551110003"
     }
@@ -135,12 +143,29 @@ $demoCustomers = @(
 
 foreach ($candidate in $demoCustomers)
 {
-    if ($customers.email -notcontains $candidate.email)
+    $existing =
+        $customers |
+        Where-Object {
+            $_.email -eq $candidate.email `
+                -or $_.phone -eq $candidate.phone
+        } |
+        Select-Object -First 1
+
+    if ($null -eq $existing)
     {
         Invoke-IdempotentPost `
             -Uri "$ApiBaseUrl/api/customers" `
             -Headers $headers `
             -Body ($candidate | ConvertTo-Json)
+    }
+    else
+    {
+        Invoke-RestMethod `
+            -Uri "$ApiBaseUrl/api/customers/$($existing.id)" `
+            -Method Put `
+            -Headers $headers `
+            -ContentType "application/json; charset=utf-8" `
+            -Body ($candidate | ConvertTo-Json) | Out-Null
     }
 }
 
@@ -155,19 +180,45 @@ $services =
     )
 
 $demoServices = @(
-    @{ name = "Kombi Bakımı"; defaultDurationMinutes = 60 },
-    @{ name = "Elektrik Tesisatı"; defaultDurationMinutes = 90 },
-    @{ name = "Genel Arıza Tespiti"; defaultDurationMinutes = 45 }
+    @{
+        name = "Kombi Bak${dotlessI}m${dotlessI}"
+        defaultDurationMinutes = 60
+    },
+    @{
+        name = "Elektrik Tesisat${dotlessI}"
+        defaultDurationMinutes = 90
+    },
+    @{
+        name = "Genel Ar${dotlessI}za Tespiti"
+        defaultDurationMinutes = 45
+    }
 )
 
 foreach ($candidate in $demoServices)
 {
-    if ($services.name -notcontains $candidate.name)
+    $existing =
+        $services |
+        Where-Object {
+            $_.defaultDurationMinutes `
+                -eq $candidate.defaultDurationMinutes
+        } |
+        Select-Object -First 1
+
+    if ($null -eq $existing)
     {
         Invoke-IdempotentPost `
             -Uri "$ApiBaseUrl/api/services" `
             -Headers $headers `
             -Body ($candidate | ConvertTo-Json)
+    }
+    else
+    {
+        Invoke-RestMethod `
+            -Uri "$ApiBaseUrl/api/services/$($existing.id)" `
+            -Method Put `
+            -Headers $headers `
+            -ContentType "application/json; charset=utf-8" `
+            -Body ($candidate | ConvertTo-Json) | Out-Null
     }
 }
 

@@ -5,8 +5,12 @@ import { redirect } from "next/navigation";
 
 import { problemMessage } from "@/lib/api/problem-details";
 import { createServerApiClient } from "@/lib/api/server-client";
+import { formValues, type ActionState } from "@/lib/action-state";
 
-export async function createInvitationAction(formData: FormData) {
+export async function createInvitationAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const client = await createServerApiClient();
   const { data, error } = await client.POST("/api/users/invitations", {
     body: {
@@ -16,11 +20,13 @@ export async function createInvitationAction(formData: FormData) {
   });
 
   if (!data) {
-    redirect(`/users?error=${encodeURIComponent(problemMessage(error))}`);
+    return { error: problemMessage(error), values: formValues(formData) };
   }
 
   revalidatePath("/users");
-  redirect("/users?success=Davet e-postası gönderildi");
+  return {
+    redirectTo: `/users?success=${encodeURIComponent("Davet e-postası gönderildi")}`,
+  };
 }
 
 export async function resendInvitationAction(id: string) {
@@ -37,7 +43,7 @@ export async function resendInvitationAction(id: string) {
   }
 
   revalidatePath("/users");
-  redirect("/users?success=Davet yeniden gönderildi");
+  redirect(`/users?success=${encodeURIComponent("Davet yeniden gönderildi")}`);
 }
 
 export async function changeUserRoleAction(id: string, formData: FormData) {

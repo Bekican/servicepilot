@@ -3,9 +3,10 @@ import { notFound } from "next/navigation";
 import { CalendarClock, Clock3, UserRound, Wrench } from "lucide-react";
 
 import { ActionMessage } from "@/components/shared/action-message";
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { PageHeader } from "@/components/shared/page-header";
+import { PendingButton } from "@/components/shared/pending-button";
 import { StatusBadge, statusLabel } from "@/components/shared/status-badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   assignTechnicianAction,
@@ -91,9 +92,13 @@ export default async function AppointmentDetailPage({
                   action={assignTechnicianAction.bind(null, appointment.id)}
                   className="space-y-4"
                 >
+                  <label className="sr-only" htmlFor="technicianUserId">
+                    Teknisyen
+                  </label>
                   <select
                     className="bg-background h-10 w-full rounded-md border px-3 text-sm"
                     defaultValue={appointment.technicianUserId ?? ""}
+                    id="technicianUserId"
                     name="technicianUserId"
                     required
                   >
@@ -106,9 +111,14 @@ export default async function AppointmentDetailPage({
                       </option>
                     ))}
                   </select>
-                  <Button className="w-full" type="submit" variant="outline">
+                  <PendingButton
+                    className="w-full"
+                    pendingLabel="Atanıyor…"
+                    type="submit"
+                    variant="outline"
+                  >
                     Atamayı kaydet
-                  </Button>
+                  </PendingButton>
                 </form>
               </CardContent>
             </Card>
@@ -120,26 +130,39 @@ export default async function AppointmentDetailPage({
                 <CardTitle>Sonraki adım</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {appointment.allowedTransitions.map((status) => (
-                  <form
-                    action={transitionAppointmentAction.bind(
-                      null,
-                      appointment.id,
-                      status,
-                    )}
-                    key={status}
-                  >
-                    <Button
-                      className="w-full"
-                      type="submit"
-                      variant={
-                        status === "Cancelled" ? "destructive" : "default"
-                      }
+                {appointment.allowedTransitions.map((status) =>
+                  status === "Cancelled" ? (
+                    <ConfirmAction
+                      action={transitionAppointmentAction.bind(
+                        null,
+                        appointment.id,
+                        status,
+                      )}
+                      confirmLabel="Randevuyu iptal et"
+                      description="Randevu terminal duruma geçecek ve teknisyen zaman aralığı yeniden kullanılabilir olacak."
+                      key={status}
+                      title="Randevu iptal edilsin mi?"
+                      triggerLabel={statusLabel(status)}
+                    />
+                  ) : (
+                    <form
+                      action={transitionAppointmentAction.bind(
+                        null,
+                        appointment.id,
+                        status,
+                      )}
+                      key={status}
                     >
-                      {statusLabel(status)}
-                    </Button>
-                  </form>
-                ))}
+                      <PendingButton
+                        className="w-full"
+                        pendingLabel="Güncelleniyor…"
+                        type="submit"
+                      >
+                        {statusLabel(status)}
+                      </PendingButton>
+                    </form>
+                  ),
+                )}
               </CardContent>
             </Card>
           ) : null}

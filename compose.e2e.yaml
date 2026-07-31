@@ -1,0 +1,83 @@
+name: servicepilot-e2e
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: servicepilot_e2e
+      POSTGRES_USER: servicepilot_e2e
+      POSTGRES_PASSWORD: e2e-only-password
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U servicepilot_e2e -d servicepilot_e2e"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "11025:1025"
+      - "18025:8025"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: >-
+        Host=postgres;Port=5432;Database=servicepilot_e2e;
+        Username=servicepilot_e2e;Password=e2e-only-password
+      Jwt__SigningKey: servicepilot-e2e-signing-key-at-least-32-characters
+      Smtp__Host: mailpit
+      Smtp__Port: 1025
+      Smtp__EnableSsl: "false"
+      Smtp__FromAddress: no-reply@servicepilot.e2e
+      Smtp__FromName: ServicePilot E2E
+      Invitations__PublicBaseUrl: >-
+        http://127.0.0.1:13000/invitations/accept
+      Database__MigrateOnStartup: "true"
+    ports:
+      - "15267:8080"
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__Database: >-
+        Host=postgres;Port=5432;Database=servicepilot_e2e;
+        Username=servicepilot_e2e;Password=e2e-only-password
+      Smtp__Host: mailpit
+      Smtp__Port: 1025
+      Smtp__EnableSsl: "false"
+      Smtp__FromAddress: no-reply@servicepilot.e2e
+      Smtp__FromName: ServicePilot E2E
+      Invitations__PublicBaseUrl: >-
+        http://127.0.0.1:13000/invitations/accept
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      SERVICEPILOT_API_URL: http://api:8080
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "13000:3000"

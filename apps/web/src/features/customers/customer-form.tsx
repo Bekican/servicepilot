@@ -1,6 +1,13 @@
-import { Button } from "@/components/ui/button";
+"use client";
+
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+import { FormError } from "@/components/shared/form-error";
+import { PendingButton } from "@/components/shared/pending-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { initialActionState, type ActionState } from "@/lib/action-state";
 import type { Customer } from "@/lib/api/types";
 
 export function CustomerForm({
@@ -8,17 +15,33 @@ export function CustomerForm({
   customer,
   submitLabel,
 }: {
-  action: (formData: FormData) => void | Promise<void>;
+  action: (
+    state: ActionState,
+    formData: FormData,
+  ) => ActionState | Promise<ActionState>;
   customer?: Customer;
   submitLabel: string;
 }) {
+  const [state, formAction] = useActionState(action, initialActionState);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.redirectTo) router.push(state.redirectTo);
+  }, [router, state.redirectTo]);
+
   return (
-    <form action={action} className="space-y-7">
+    <form
+      action={formAction}
+      aria-describedby={state.error ? "customer-form-error" : undefined}
+      className="space-y-7"
+      key={state.values ? JSON.stringify(state.values) : "initial"}
+    >
+      <FormError id="customer-form-error" message={state.error} />
       <div className="space-y-2">
         <Label htmlFor="type">Müşteri türü</Label>
         <select
           className="bg-background h-10 w-full rounded-md border px-3 text-sm"
-          defaultValue={customer?.type ?? "Individual"}
+          defaultValue={state.values?.type ?? customer?.type ?? "Individual"}
           id="type"
           name="type"
         >
@@ -33,33 +56,37 @@ export function CustomerForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <FormField
-          defaultValue={customer?.firstName ?? ""}
+          defaultValue={state.values?.firstName ?? customer?.firstName ?? ""}
           label="Ad"
           name="firstName"
         />
         <FormField
-          defaultValue={customer?.lastName ?? ""}
+          defaultValue={state.values?.lastName ?? customer?.lastName ?? ""}
           label="Soyad"
           name="lastName"
         />
         <FormField
-          defaultValue={customer?.companyName ?? ""}
+          defaultValue={
+            state.values?.companyName ?? customer?.companyName ?? ""
+          }
           label="Şirket adı"
           name="companyName"
         />
         <FormField
-          defaultValue={customer?.contactPerson ?? ""}
+          defaultValue={
+            state.values?.contactPerson ?? customer?.contactPerson ?? ""
+          }
           label="İletişim kişisi"
           name="contactPerson"
         />
         <FormField
-          defaultValue={customer?.email ?? ""}
+          defaultValue={state.values?.email ?? customer?.email ?? ""}
           label="E-posta"
           name="email"
           type="email"
         />
         <FormField
-          defaultValue={customer?.phone ?? ""}
+          defaultValue={state.values?.phone ?? customer?.phone ?? ""}
           label="Telefon"
           name="phone"
           placeholder="+905551112233"
@@ -67,7 +94,9 @@ export function CustomerForm({
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit">{submitLabel}</Button>
+        <PendingButton pendingLabel="Kaydediliyor…" type="submit">
+          {submitLabel}
+        </PendingButton>
       </div>
     </form>
   );

@@ -102,7 +102,7 @@ export async function registerAction(
   }
 
   await setSession(data.accessToken, data.expiresAtUtc);
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function acceptInvitationAction(
@@ -127,7 +127,7 @@ export async function acceptInvitationAction(
   }
 
   await setSession(data.accessToken, data.expiresAtUtc);
-  redirect("/");
+  redirect("/appointments");
 }
 
 export async function logoutAction() {

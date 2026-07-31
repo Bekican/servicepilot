@@ -5,6 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { ActionMessage } from "@/components/shared/action-message";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { PendingButton } from "@/components/shared/pending-button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -69,7 +70,9 @@ export default async function RemindersPage({
                   <TableHead>Durum</TableHead>
                   <TableHead>Deneme</TableHead>
                   <TableHead>Son hata</TableHead>
-                  <TableHead />
+                  <TableHead>
+                    <span className="sr-only">İşlemler</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -99,10 +102,15 @@ export default async function RemindersPage({
                         <form
                           action={retryReminderAction.bind(null, reminder.id)}
                         >
-                          <Button size="sm" type="submit" variant="outline">
+                          <PendingButton
+                            pendingLabel="Kuyruğa alınıyor…"
+                            size="sm"
+                            type="submit"
+                            variant="outline"
+                          >
                             <RefreshCw />
                             Tekrar dene
-                          </Button>
+                          </PendingButton>
                         </form>
                       ) : null}
                     </TableCell>
