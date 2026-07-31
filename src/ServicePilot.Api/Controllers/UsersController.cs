@@ -17,7 +17,7 @@ using ContractUserResponse =
 namespace ServicePilot.Api.Controllers;
 
 [ApiController]
-[Authorize(Policy = AuthorizationPolicies.ActiveOwner)]
+[Authorize(Policy = AuthorizationPolicies.ManageUsers)]
 [Route("api/users")]
 public sealed class UsersController(
     ListUsersHandler listHandler,

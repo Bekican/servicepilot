@@ -33,7 +33,7 @@ public sealed class RemindersController(
 
     [HttpPost("{id:guid}/retry")]
     [Authorize(Policy =
-        AuthorizationPolicies.AppointmentManage)]
+        AuthorizationPolicies.ReminderRetry)]
     public async Task<IActionResult> Retry(
         Guid id,
         CancellationToken cancellationToken)

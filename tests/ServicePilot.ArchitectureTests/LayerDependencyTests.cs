@@ -40,6 +40,47 @@ public sealed class LayerDependencyTests
             references);
     }
 
+    [Fact]
+    public void Api_ShouldNotDependOnDomain()
+    {
+        string[] references =
+            GetServicePilotReferences(
+                typeof(Program).Assembly);
+
+        Assert.DoesNotContain(
+            "ServicePilot.Domain",
+            references);
+    }
+
+    [Fact]
+    public void ApiControllers_ShouldNotUseInfrastructureTypes()
+    {
+        Type[] controllerTypes =
+            typeof(Program).Assembly
+                .GetTypes()
+                .Where(type =>
+                    type.Namespace
+                        == "ServicePilot.Api.Controllers")
+                .ToArray();
+
+        string[] infrastructureDependencies =
+            controllerTypes
+                .SelectMany(type =>
+                    type.GetConstructors())
+                .SelectMany(constructor =>
+                    constructor.GetParameters())
+                .Select(parameter =>
+                    parameter.ParameterType.Assembly
+                        .GetName().Name)
+                .Where(name =>
+                    name
+                        == "ServicePilot.Infrastructure")
+                .Cast<string>()
+                .ToArray();
+
+        Assert.Empty(infrastructureDependencies);
+    }
+
     private static string[] GetServicePilotReferences(
         System.Reflection.Assembly assembly)
     {

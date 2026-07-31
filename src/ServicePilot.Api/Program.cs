@@ -4,16 +4,18 @@ using System.Threading.RateLimiting;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 using ServicePilot.Api.Authentication;
+using ServicePilot.Api.Health;
 using ServicePilot.Application;
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Tenancy;
 using ServicePilot.Application.Authentication;
-using ServicePilot.Domain.Users;
+using ServicePilot.Application.Authorization;
 using ServicePilot.Infrastructure;
 using ServicePilot.Infrastructure.Authentication;
 using ServicePilot.Infrastructure.Persistence;
@@ -26,6 +28,11 @@ JwtOptions jwtOptions =
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+builder.Services
+    .AddHealthChecks()
+    .AddCheck<DatabaseReadinessHealthCheck>(
+        "database",
+        tags: ["ready"]);
 builder.Services.AddHttpLogging(options =>
 {
     options.LoggingFields =
@@ -74,71 +81,38 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy(
-        AuthorizationPolicies.ActiveOwner,
-        policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.AddRequirements(
-                new ActiveOwnerRequirement());
-        });
-    options.AddPolicy(
+    AddCapabilityPolicy(
+        options,
         AuthorizationPolicies.ActiveUser,
-        policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.AddRequirements(
-                new ActiveRoleRequirement());
-        });
-    options.AddPolicy(
+        UserCapability.AccessSystem);
+    AddCapabilityPolicy(
+        options,
+        AuthorizationPolicies.ManageUsers,
+        UserCapability.ManageUsers);
+    AddCapabilityPolicy(
+        options,
         AuthorizationPolicies.CustomerWrite,
-        policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.AddRequirements(
-                new ActiveRoleRequirement(
-                    UserRoles.Owner,
-                    UserRoles.Admin,
-                    UserRoles.Dispatcher));
-        });
-    options.AddPolicy(
+        UserCapability.ManageCustomers);
+    AddCapabilityPolicy(
+        options,
         AuthorizationPolicies.ServiceWrite,
-        policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.AddRequirements(
-                new ActiveRoleRequirement(
-                    UserRoles.Owner,
-                    UserRoles.Admin));
-        });
-    options.AddPolicy(
+        UserCapability.ManageServices);
+    AddCapabilityPolicy(
+        options,
         AuthorizationPolicies.AppointmentManage,
-        policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.AddRequirements(
-                new ActiveRoleRequirement(
-                    UserRoles.Owner,
-                    UserRoles.Admin,
-                    UserRoles.Dispatcher));
-        });
-    options.AddPolicy(
+        UserCapability.ManageAppointments);
+    AddCapabilityPolicy(
+        options,
         AuthorizationPolicies.DashboardView,
-        policy =>
-        {
-            policy.RequireAuthenticatedUser();
-            policy.AddRequirements(
-                new ActiveRoleRequirement(
-                    UserRoles.Owner,
-                    UserRoles.Admin));
-        });
+        UserCapability.ViewDashboard);
+    AddCapabilityPolicy(
+        options,
+        AuthorizationPolicies.ReminderRetry,
+        UserCapability.RetryReminders);
 });
 builder.Services.AddScoped<
     IAuthorizationHandler,
-    ActiveOwnerAuthorizationHandler>();
-builder.Services.AddScoped<
-    IAuthorizationHandler,
-    ActiveRoleAuthorizationHandler>();
+    UserCapabilityAuthorizationHandler>();
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddScoped<HttpTenantContext>();
 builder.Services.AddScoped<ITenantContext>(
@@ -214,6 +188,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks(
+    "/health/live",
+    new HealthCheckOptions
+    {
+        Predicate = _ => false
+    });
+app.MapHealthChecks(
+    "/health/ready",
+    new HealthCheckOptions
+    {
+        Predicate = registration =>
+            registration.Tags.Contains("ready")
+    });
 
 app.Run();
 
@@ -223,6 +210,21 @@ static string GetClientPartition(
     return httpContext.Connection.RemoteIpAddress?
         .ToString()
         ?? "unknown";
+}
+
+static void AddCapabilityPolicy(
+    AuthorizationOptions options,
+    string policyName,
+    UserCapability capability)
+{
+    options.AddPolicy(
+        policyName,
+        policy =>
+        {
+            policy.RequireAuthenticatedUser();
+            policy.AddRequirements(
+                new UserCapabilityRequirement(capability));
+        });
 }
 
 public partial class Program;

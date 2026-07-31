@@ -13,7 +13,7 @@ namespace ServicePilot.Api.Controllers;
 
 [ApiController]
 [EnableRateLimiting("invitations")]
-[Authorize(Policy = AuthorizationPolicies.ActiveOwner)]
+[Authorize(Policy = AuthorizationPolicies.ManageUsers)]
 [Route("api/users/invitations")]
 public sealed class UserInvitationsController(
     CreateInvitationHandler createHandler,

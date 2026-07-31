@@ -3,18 +3,17 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
 
 using ServicePilot.Application.Authentication;
-using ServicePilot.Application.Users;
-using ServicePilot.Domain.Users;
+using ServicePilot.Application.Authorization;
 
 namespace ServicePilot.Api.Authentication;
 
-internal sealed class ActiveRoleAuthorizationHandler(
-    IUserRepository userRepository)
-    : AuthorizationHandler<ActiveRoleRequirement>
+internal sealed class UserCapabilityAuthorizationHandler(
+    IUserAuthorizationService authorizationService)
+    : AuthorizationHandler<UserCapabilityRequirement>
 {
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
-        ActiveRoleRequirement requirement)
+        UserCapabilityRequirement requirement)
     {
         string? userIdValue =
             context.User.FindFirst(
@@ -32,17 +31,13 @@ internal sealed class ActiveRoleAuthorizationHandler(
             return;
         }
 
-        User? user = await userRepository.GetByIdAsync(
-            organizationId,
-            userId);
+        bool hasCapability =
+            await authorizationService.HasCapabilityAsync(
+                organizationId,
+                userId,
+                requirement.Capability);
 
-        if (user is null || !user.IsActive)
-        {
-            return;
-        }
-
-        if (requirement.AllowedRoles.Count == 0
-            || requirement.AllowedRoles.Contains(user.Role))
+        if (hasCapability)
         {
             context.Succeed(requirement);
         }
