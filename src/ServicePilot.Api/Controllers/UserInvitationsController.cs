@@ -6,6 +6,7 @@ using ServicePilot.Api.Authentication;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Users.Invitations;
 using ServicePilot.Application.Users.Invitations.CreateInvitation;
+using ServicePilot.Application.Users.Invitations.ListInvitations;
 using ServicePilot.Application.Users.Invitations.ResendInvitation;
 using ServicePilot.Contracts.Users.Invitations;
 
@@ -17,9 +18,25 @@ namespace ServicePilot.Api.Controllers;
 [Route("api/users/invitations")]
 public sealed class UserInvitationsController(
     CreateInvitationHandler createHandler,
-    ResendInvitationHandler resendHandler)
+    ResendInvitationHandler resendHandler,
+    ListInvitationsHandler listHandler)
     : ControllerBase
 {
+    [HttpGet]
+    [ProducesResponseType(
+        typeof(IReadOnlyList<UserInvitationResponse>),
+        StatusCodes.Status200OK)]
+    public async Task<ActionResult<
+        IReadOnlyList<UserInvitationResponse>>> List(
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<InvitationResponse> invitations =
+            await listHandler.HandleAsync(
+                cancellationToken);
+
+        return Ok(invitations.Select(MapResponse));
+    }
+
     [HttpPost]
     [ProducesResponseType(
         typeof(UserInvitationResponse),

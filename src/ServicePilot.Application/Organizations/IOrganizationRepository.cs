@@ -4,6 +4,10 @@ namespace ServicePilot.Application.Organizations;
 
 public interface IOrganizationRepository
 {
+    Task<Organization?> GetByIdAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default);
+
     Task<Organization?> GetBySlugAsync(
         string slug,
         CancellationToken cancellationToken = default);

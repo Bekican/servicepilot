@@ -4,11 +4,13 @@ using System.Text.RegularExpressions;
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
+using ServicePilot.Application.Authorization;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Customers;
 using ServicePilot.Application.Reminders;
 using ServicePilot.Application.Services;
 using ServicePilot.Application.Users;
+
 using ServicePilot.Domain.Appointments;
 using ServicePilot.Domain.Customers;
 using ServicePilot.Domain.Reminders;
@@ -24,6 +26,7 @@ public sealed partial class AppointmentService(
     IServiceCatalogRepository serviceRepository,
     IUserRepository userRepository,
     IReminderRepository reminderRepository,
+    IUserAuthorizationService authorizationService,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -31,13 +34,16 @@ public sealed partial class AppointmentService(
         CreateAppointmentData data,
         CancellationToken cancellationToken = default)
     {
+        DateTimeOffset nowUtc = timeProvider.GetUtcNow();
+
         if (!TryParseOffsetTime(
             data.StartAt,
             out DateTimeOffset startAtUtc)
             || !TryParseOffsetTime(
                 data.EndAt,
                 out DateTimeOffset endAtUtc)
-            || endAtUtc <= startAtUtc)
+            || endAtUtc <= startAtUtc
+            || startAtUtc <= nowUtc)
         {
             return Result<AppointmentResponse>.Failure(
                 AppointmentErrors.InvalidData);
@@ -78,10 +84,9 @@ public sealed partial class AppointmentService(
             data.TechnicianUserId,
             startAtUtc,
             endAtUtc,
-            timeProvider.GetUtcNow());
+            nowUtc);
         appointmentRepository.Add(appointment);
 
-        DateTimeOffset nowUtc = timeProvider.GetUtcNow();
         DateTimeOffset reminderTime =
             startAtUtc - TimeSpan.FromHours(24);
         Reminder reminder = new(
@@ -98,19 +103,23 @@ public sealed partial class AppointmentService(
         Result saveResult =
             await SaveAsync(cancellationToken);
 
-        return saveResult.IsFailure
-            ? Result<AppointmentResponse>.Failure(
-                saveResult.Error)
-            : Result<AppointmentResponse>.Success(
-                Map(appointment));
+        if (saveResult.IsFailure)
+        {
+            return Result<AppointmentResponse>.Failure(
+                saveResult.Error);
+        }
+
+        return await GetSavedResponseAsync(
+            appointment.Id,
+            cancellationToken);
     }
 
     public async Task<Result<AppointmentResponse>> GetAsync(
         Guid appointmentId,
         CancellationToken cancellationToken = default)
     {
-        Appointment? appointment =
-            await appointmentRepository.GetByIdAsync(
+        AppointmentDetails? appointment =
+            await appointmentRepository.GetDetailsAsync(
                 currentUser.OrganizationId,
                 appointmentId,
                 cancellationToken);
@@ -124,26 +133,85 @@ public sealed partial class AppointmentService(
                 AppointmentErrors.NotFound);
         }
 
+        bool canManage =
+            await CanManageAppointmentsAsync(
+                cancellationToken);
+
         return Result<AppointmentResponse>.Success(
-            Map(appointment));
+            Map(appointment, canManage));
     }
 
     public async Task<IReadOnlyList<AppointmentResponse>>
         ListAsync(
             CancellationToken cancellationToken = default)
     {
+        Result<IReadOnlyList<AppointmentResponse>> result =
+            await ListAsync(
+                new AppointmentFilterData(
+                    null,
+                    null,
+                    null,
+                    null),
+                cancellationToken);
+
+        return result.Value;
+    }
+
+    public async Task<Result<
+        IReadOnlyList<AppointmentResponse>>> ListAsync(
+        AppointmentFilterData filter,
+        CancellationToken cancellationToken = default)
+    {
+        if (filter.FromUtc is DateTimeOffset fromUtc
+            && filter.ToUtc is DateTimeOffset toUtc
+            && toUtc <= fromUtc)
+        {
+            return Result<
+                IReadOnlyList<AppointmentResponse>>.Failure(
+                    AppointmentErrors.InvalidData);
+        }
+
+        AppointmentStatus? status = null;
+
+        if (!string.IsNullOrWhiteSpace(filter.Status))
+        {
+            if (!Enum.TryParse(
+                filter.Status,
+                true,
+                out AppointmentStatus parsedStatus)
+                || !Enum.IsDefined(parsedStatus))
+            {
+                return Result<
+                    IReadOnlyList<AppointmentResponse>>
+                    .Failure(
+                        AppointmentErrors.InvalidData);
+            }
+
+            status = parsedStatus;
+        }
+
         Guid? technicianFilter =
             currentUser.Role == UserRoles.Technician
                 ? currentUser.UserId
-                : null;
+                : filter.TechnicianUserId;
 
-        IReadOnlyList<Appointment> appointments =
-            await appointmentRepository.ListAsync(
+        IReadOnlyList<AppointmentDetails> appointments =
+            await appointmentRepository.ListDetailsAsync(
                 currentUser.OrganizationId,
-                technicianFilter,
+                new AppointmentQuery(
+                    filter.FromUtc?.ToUniversalTime(),
+                    filter.ToUtc?.ToUniversalTime(),
+                    status,
+                    technicianFilter),
+                cancellationToken);
+        bool canManage =
+            await CanManageAppointmentsAsync(
                 cancellationToken);
 
-        return appointments.Select(Map).ToArray();
+        return Result<
+            IReadOnlyList<AppointmentResponse>>.Success(
+                appointments.Select(appointment =>
+                    Map(appointment, canManage)).ToArray());
     }
 
     public async Task<Result<AppointmentResponse>>
@@ -203,11 +271,15 @@ public sealed partial class AppointmentService(
         Result saveResult =
             await SaveAsync(cancellationToken);
 
-        return saveResult.IsFailure
-            ? Result<AppointmentResponse>.Failure(
-                saveResult.Error)
-            : Result<AppointmentResponse>.Success(
-                Map(appointment));
+        if (saveResult.IsFailure)
+        {
+            return Result<AppointmentResponse>.Failure(
+                saveResult.Error);
+        }
+
+        return await GetSavedResponseAsync(
+            appointment.Id,
+            cancellationToken);
     }
 
     public async Task<Result<AppointmentResponse>>
@@ -238,14 +310,20 @@ public sealed partial class AppointmentService(
                 AppointmentErrors.InvalidTransition);
         }
 
-        if (currentUser.Role == UserRoles.Technician
-            && (
-                appointment.TechnicianUserId
-                    != currentUser.UserId
+        if (currentUser.Role == UserRoles.Technician)
+        {
+            if (appointment.TechnicianUserId
+                != currentUser.UserId
                 || target is not (
                     AppointmentStatus.InProgress
-                    or AppointmentStatus.Completed)
-            ))
+                    or AppointmentStatus.Completed))
+            {
+                return Result<AppointmentResponse>.Failure(
+                    AppointmentErrors.Forbidden);
+            }
+        }
+        else if (!await CanManageAppointmentsAsync(
+            cancellationToken))
         {
             return Result<AppointmentResponse>.Failure(
                 AppointmentErrors.Forbidden);
@@ -266,11 +344,15 @@ public sealed partial class AppointmentService(
         Result saveResult =
             await SaveAsync(cancellationToken);
 
-        return saveResult.IsFailure
-            ? Result<AppointmentResponse>.Failure(
-                saveResult.Error)
-            : Result<AppointmentResponse>.Success(
-                Map(appointment));
+        if (saveResult.IsFailure)
+        {
+            return Result<AppointmentResponse>.Failure(
+                saveResult.Error);
+        }
+
+        return await GetSavedResponseAsync(
+            appointment.Id,
+            cancellationToken);
     }
 
     private async Task<(Customer? Customer, Error? Error)>
@@ -353,6 +435,132 @@ public sealed partial class AppointmentService(
         }
     }
 
+    private async Task<Result<AppointmentResponse>>
+        GetSavedResponseAsync(
+            Guid appointmentId,
+            CancellationToken cancellationToken)
+    {
+        AppointmentDetails? details =
+            await appointmentRepository.GetDetailsAsync(
+                currentUser.OrganizationId,
+                appointmentId,
+                cancellationToken);
+
+        if (details is null)
+        {
+            return Result<AppointmentResponse>.Failure(
+                AppointmentErrors.NotFound);
+        }
+
+        bool canManage =
+            await CanManageAppointmentsAsync(
+                cancellationToken);
+
+        return Result<AppointmentResponse>.Success(
+            Map(details, canManage));
+    }
+
+    private Task<bool> CanManageAppointmentsAsync(
+        CancellationToken cancellationToken)
+    {
+        return authorizationService.HasCapabilityAsync(
+            currentUser.OrganizationId,
+            currentUser.UserId,
+            UserCapability.ManageAppointments,
+            cancellationToken);
+    }
+
+    private AppointmentResponse Map(
+        AppointmentDetails appointment,
+        bool canManage)
+    {
+        IReadOnlyList<string> allowedTransitions =
+            GetAllowedTransitions(
+                appointment,
+                canManage);
+        bool canAssignTechnician =
+            canManage
+            && appointment.Status is not (
+                AppointmentStatus.Completed
+                or AppointmentStatus.Cancelled);
+
+        return new AppointmentResponse(
+            appointment.Id,
+            appointment.CustomerId,
+            appointment.CustomerNumber,
+            appointment.CustomerDisplayName,
+            appointment.ServiceId,
+            appointment.ServiceName,
+            appointment.TechnicianUserId,
+            appointment.TechnicianDisplayName,
+            appointment.StartAtUtc,
+            appointment.EndAtUtc,
+            appointment.Status.ToString(),
+            allowedTransitions,
+            canAssignTechnician,
+            appointment.CreatedAtUtc,
+            appointment.UpdatedAtUtc);
+    }
+
+    private IReadOnlyList<string> GetAllowedTransitions(
+        AppointmentDetails appointment,
+        bool canManage)
+    {
+        if (currentUser.Role == UserRoles.Technician)
+        {
+            if (appointment.TechnicianUserId
+                != currentUser.UserId)
+            {
+                return [];
+            }
+
+            return appointment.Status switch
+            {
+                AppointmentStatus.Confirmed =>
+                [
+                    AppointmentStatus.InProgress
+                        .ToString()
+                ],
+                AppointmentStatus.InProgress =>
+                [
+                    AppointmentStatus.Completed
+                        .ToString()
+                ],
+                _ => []
+            };
+        }
+
+        if (!canManage)
+        {
+            return [];
+        }
+
+        return appointment.Status switch
+        {
+            AppointmentStatus.Scheduled
+                when appointment.TechnicianUserId
+                    is not null =>
+            [
+                AppointmentStatus.Confirmed.ToString(),
+                AppointmentStatus.Cancelled.ToString()
+            ],
+            AppointmentStatus.Scheduled =>
+            [
+                AppointmentStatus.Cancelled.ToString()
+            ],
+            AppointmentStatus.Confirmed =>
+            [
+                AppointmentStatus.InProgress.ToString(),
+                AppointmentStatus.Cancelled.ToString()
+            ],
+            AppointmentStatus.InProgress =>
+            [
+                AppointmentStatus.Completed.ToString()
+            ],
+            _ => []
+        };
+    }
+
     private static bool TryParseOffsetTime(
         string value,
         out DateTimeOffset utcValue)
@@ -371,21 +579,6 @@ public sealed partial class AppointmentService(
 
         utcValue = parsed.ToUniversalTime();
         return true;
-    }
-
-    private static AppointmentResponse Map(
-        Appointment appointment)
-    {
-        return new AppointmentResponse(
-            appointment.Id,
-            appointment.CustomerId,
-            appointment.ServiceId,
-            appointment.TechnicianUserId,
-            appointment.StartAtUtc,
-            appointment.EndAtUtc,
-            appointment.Status.ToString(),
-            appointment.CreatedAtUtc,
-            appointment.UpdatedAtUtc);
     }
 
     [GeneratedRegex(

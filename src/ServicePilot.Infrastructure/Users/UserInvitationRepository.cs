@@ -10,6 +10,23 @@ internal sealed class UserInvitationRepository(
     ServicePilotDbContext dbContext)
     : IUserInvitationRepository
 {
+    public async Task<IReadOnlyList<UserInvitation>>
+        ListPendingAsync(
+            Guid organizationId,
+            CancellationToken cancellationToken = default)
+    {
+        return await dbContext.UserInvitations
+            .AsNoTracking()
+            .Where(invitation =>
+                invitation.OrganizationId == organizationId
+                && invitation.Status
+                    == UserInvitationStatus.Pending)
+            .OrderBy(invitation =>
+                invitation.ExpiresAtUtc)
+            .ThenBy(invitation => invitation.Id)
+            .ToArrayAsync(cancellationToken);
+    }
+
     public Task<UserInvitation?> GetByIdAsync(
         Guid organizationId,
         Guid invitationId,

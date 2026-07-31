@@ -53,7 +53,7 @@ services:
       Smtp__FromAddress: no-reply@servicepilot.local
       Smtp__FromName: ServicePilot
       Invitations__PublicBaseUrl: >-
-        http://localhost:5173/invitations/accept
+        http://localhost:3000/invitations/accept
       Database__MigrateOnStartup: "true"
     ports:
       - "5267:8080"
@@ -78,7 +78,24 @@ services:
       Smtp__FromAddress: no-reply@servicepilot.local
       Smtp__FromName: ServicePilot
       Invitations__PublicBaseUrl: >-
-        http://localhost:5173/invitations/accept
+        http://localhost:3000/invitations/accept
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: servicepilot-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      SERVICEPILOT_API_URL: http://api:8080
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "3000:3000"
 
 volumes:
   servicepilot-postgres-data:

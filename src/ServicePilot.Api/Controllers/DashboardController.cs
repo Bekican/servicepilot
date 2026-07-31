@@ -25,7 +25,8 @@ public sealed class DashboardController(
                 cancellationToken);
 
         return Ok(new DashboardSummaryResponse(
-            summary.DateUtc,
+            summary.Date,
+            summary.TimeZoneId,
             summary.ActiveCustomerCount,
             summary.ActiveUserCount,
             summary.ScheduledAppointmentCount,

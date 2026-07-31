@@ -27,6 +27,9 @@ public sealed class CustomersController(
     [HttpPost]
     [Authorize(Policy =
         AuthorizationPolicies.CustomerWrite)]
+    [ProducesResponseType(
+        typeof(ContractCustomerResponse),
+        StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(
         CustomerUpsertRequest request,
         CancellationToken cancellationToken)
@@ -58,6 +61,9 @@ public sealed class CustomersController(
     }
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(
+        typeof(ContractCustomerResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> Get(
         Guid id,
         CancellationToken cancellationToken)
@@ -73,6 +79,9 @@ public sealed class CustomersController(
     [HttpPut("{id:guid}")]
     [Authorize(Policy =
         AuthorizationPolicies.CustomerWrite)]
+    [ProducesResponseType(
+        typeof(ContractCustomerResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> Update(
         Guid id,
         CustomerUpsertRequest request,
@@ -109,6 +118,9 @@ public sealed class CustomersController(
     [HttpPost("{customerId:guid}/addresses")]
     [Authorize(Policy =
         AuthorizationPolicies.CustomerWrite)]
+    [ProducesResponseType(
+        typeof(ContractAddressResponse),
+        StatusCodes.Status201Created)]
     public async Task<IActionResult> AddAddress(
         Guid customerId,
         CustomerAddressUpsertRequest request,
@@ -131,6 +143,9 @@ public sealed class CustomersController(
         "{customerId:guid}/addresses/{addressId:guid}")]
     [Authorize(Policy =
         AuthorizationPolicies.CustomerWrite)]
+    [ProducesResponseType(
+        typeof(ContractAddressResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateAddress(
         Guid customerId,
         Guid addressId,
@@ -173,6 +188,9 @@ public sealed class CustomersController(
         "{customerId:guid}/addresses/{addressId:guid}/primary")]
     [Authorize(Policy =
         AuthorizationPolicies.CustomerWrite)]
+    [ProducesResponseType(
+        typeof(ContractAddressResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> SetPrimaryAddress(
         Guid customerId,
         Guid addressId,

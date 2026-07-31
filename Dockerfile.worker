@@ -1,7 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /source
 COPY . .
-RUN dotnet restore ServicePilot.slnx -p:NuGetAudit=false
+RUN dotnet restore src/ServicePilot.Worker/ServicePilot.Worker.csproj \
+    -p:NuGetAudit=false
 RUN dotnet publish src/ServicePilot.Worker/ServicePilot.Worker.csproj \
     --configuration Release \
     --no-restore \
@@ -9,6 +10,10 @@ RUN dotnet publish src/ServicePilot.Worker/ServicePilot.Worker.csproj \
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/publish .
 USER $APP_UID
 ENTRYPOINT ["dotnet", "ServicePilot.Worker.dll"]

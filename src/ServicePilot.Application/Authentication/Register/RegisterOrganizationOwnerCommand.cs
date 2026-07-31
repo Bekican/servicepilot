@@ -6,4 +6,5 @@ public sealed record RegisterOrganizationOwnerCommand(
     string FirstName,
     string LastName,
     string Email,
-    string Password);
+    string Password,
+    string TimeZoneId = "UTC");

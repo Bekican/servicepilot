@@ -4,6 +4,10 @@ namespace ServicePilot.Application.Users;
 
 public interface IUserInvitationRepository
 {
+    Task<IReadOnlyList<UserInvitation>> ListPendingAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default);
+
     Task<UserInvitation?> GetByIdAsync(
         Guid organizationId,
         Guid invitationId,

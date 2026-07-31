@@ -13,6 +13,8 @@ internal sealed class DashboardRepository(
 {
     public async Task<DashboardSummary> GetSummaryAsync(
         Guid organizationId,
+        DateOnly date,
+        string timeZoneId,
         DateTimeOffset dayStartUtc,
         DateTimeOffset dayEndUtc,
         CancellationToken cancellationToken = default)
@@ -63,8 +65,8 @@ internal sealed class DashboardRepository(
                 cancellationToken);
 
         return new DashboardSummary(
-            DateOnly.FromDateTime(
-                dayStartUtc.UtcDateTime),
+            date,
+            timeZoneId,
             activeCustomerCount,
             activeUserCount,
             GetCount(

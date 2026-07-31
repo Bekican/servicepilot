@@ -38,6 +38,8 @@ public sealed class RegisterOrganizationOwnerHandler(
             AuthenticationRules.NormalizeEmail(
                 command.Email ?? string.Empty);
         string password = command.Password ?? string.Empty;
+        string timeZoneId =
+            command.TimeZoneId?.Trim() ?? string.Empty;
 
         Error? validationError = Validate(
             organizationName,
@@ -45,7 +47,8 @@ public sealed class RegisterOrganizationOwnerHandler(
             firstName,
             lastName,
             email,
-            password);
+            password,
+            timeZoneId);
 
         if (validationError is not null)
         {
@@ -70,6 +73,7 @@ public sealed class RegisterOrganizationOwnerHandler(
             Guid.NewGuid(),
             organizationName,
             organizationSlug,
+            timeZoneId,
             createdAtUtc);
 
         string passwordHash = passwordHasher.Hash(password);
@@ -132,7 +136,8 @@ public sealed class RegisterOrganizationOwnerHandler(
         string firstName,
         string lastName,
         string email,
-        string password)
+        string password,
+        string timeZoneId)
     {
         if (string.IsNullOrWhiteSpace(organizationName))
         {
@@ -207,6 +212,27 @@ public sealed class RegisterOrganizationOwnerHandler(
         if (password.Length > AuthenticationRules.MaxPasswordLength)
         {
             return AuthenticationErrors.PasswordTooLong;
+        }
+
+        if (string.IsNullOrWhiteSpace(timeZoneId)
+            || timeZoneId.Length
+                > Organization.MaxTimeZoneIdLength)
+        {
+            return AuthenticationErrors.InvalidTimeZone;
+        }
+
+        try
+        {
+            _ = TimeZoneInfo.FindSystemTimeZoneById(
+                timeZoneId);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return AuthenticationErrors.InvalidTimeZone;
+        }
+        catch (InvalidTimeZoneException)
+        {
+            return AuthenticationErrors.InvalidTimeZone;
         }
 
         return null;

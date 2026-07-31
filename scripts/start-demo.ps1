@@ -15,5 +15,6 @@ finally
 }
 
 Write-Host "API: http://localhost:5267"
+Write-Host "Web: http://localhost:3000"
 Write-Host "OpenAPI: http://localhost:5267/openapi/v1.json"
 Write-Host "Mailpit: http://localhost:8025"

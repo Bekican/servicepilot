@@ -7,6 +7,28 @@ public sealed class UserAuthorizationService(
     IUserRepository userRepository)
     : IUserAuthorizationService
 {
+    public async Task<IReadOnlyList<UserCapability>>
+        GetCapabilitiesAsync(
+            Guid organizationId,
+            Guid userId,
+            CancellationToken cancellationToken = default)
+    {
+        if (organizationId == Guid.Empty
+            || userId == Guid.Empty)
+        {
+            return [];
+        }
+
+        User? user = await userRepository.GetByIdAsync(
+            organizationId,
+            userId,
+            cancellationToken);
+
+        return user is { IsActive: true }
+            ? GetCapabilities(user.Role)
+            : [];
+    }
+
     public async Task<bool> HasCapabilityAsync(
         Guid organizationId,
         Guid userId,
@@ -19,37 +41,43 @@ public sealed class UserAuthorizationService(
             return false;
         }
 
-        User? user = await userRepository.GetByIdAsync(
-            organizationId,
-            userId,
-            cancellationToken);
+        IReadOnlyList<UserCapability> capabilities =
+            await GetCapabilitiesAsync(
+                organizationId,
+                userId,
+                cancellationToken);
 
-        return user is { IsActive: true }
-            && HasCapability(user.Role, capability);
+        return capabilities.Contains(capability);
     }
 
-    private static bool HasCapability(
-        string role,
-        UserCapability capability)
+    private static IReadOnlyList<UserCapability>
+        GetCapabilities(string role)
     {
         return role switch
         {
-            UserRoles.Owner => true,
-            UserRoles.Admin => capability is
-                UserCapability.AccessSystem
-                or UserCapability.ManageCustomers
-                or UserCapability.ManageServices
-                or UserCapability.ManageAppointments
-                or UserCapability.ViewDashboard
-                or UserCapability.RetryReminders,
-            UserRoles.Dispatcher => capability is
-                UserCapability.AccessSystem
-                or UserCapability.ManageCustomers
-                or UserCapability.ManageAppointments
-                or UserCapability.RetryReminders,
+            UserRoles.Owner =>
+                Enum.GetValues<UserCapability>(),
+            UserRoles.Admin =>
+            [
+                UserCapability.AccessSystem,
+                UserCapability.ManageCustomers,
+                UserCapability.ManageServices,
+                UserCapability.ManageAppointments,
+                UserCapability.ViewDashboard,
+                UserCapability.RetryReminders
+            ],
+            UserRoles.Dispatcher =>
+            [
+                UserCapability.AccessSystem,
+                UserCapability.ManageCustomers,
+                UserCapability.ManageAppointments,
+                UserCapability.RetryReminders
+            ],
             UserRoles.Technician =>
-                capability == UserCapability.AccessSystem,
-            _ => false
+            [
+                UserCapability.AccessSystem
+            ],
+            _ => []
         };
     }
 }

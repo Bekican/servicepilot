@@ -18,6 +18,9 @@ public sealed class ServicesController(
     [HttpPost]
     [Authorize(Policy =
         AuthorizationPolicies.ServiceWrite)]
+    [ProducesResponseType(
+        typeof(ServiceResponse),
+        StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(
         ServiceUpsertRequest request,
         CancellationToken cancellationToken)
@@ -51,6 +54,9 @@ public sealed class ServicesController(
     }
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(
+        typeof(ServiceResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> Get(
         Guid id,
         CancellationToken cancellationToken)
@@ -66,6 +72,9 @@ public sealed class ServicesController(
     [HttpPut("{id:guid}")]
     [Authorize(Policy =
         AuthorizationPolicies.ServiceWrite)]
+    [ProducesResponseType(
+        typeof(ServiceResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> Update(
         Guid id,
         ServiceUpsertRequest request,
@@ -87,6 +96,9 @@ public sealed class ServicesController(
     [HttpPatch("{id:guid}/status")]
     [Authorize(Policy =
         AuthorizationPolicies.ServiceWrite)]
+    [ProducesResponseType(
+        typeof(ServiceResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> SetStatus(
         Guid id,
         ServiceStatusRequest request,

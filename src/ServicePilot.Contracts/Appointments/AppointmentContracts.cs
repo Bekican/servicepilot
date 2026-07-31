@@ -16,10 +16,16 @@ public sealed record AppointmentStatusRequest(
 public sealed record AppointmentResponse(
     Guid Id,
     Guid CustomerId,
+    string CustomerNumber,
+    string CustomerDisplayName,
     Guid ServiceId,
+    string ServiceName,
     Guid? TechnicianUserId,
+    string? TechnicianDisplayName,
     DateTimeOffset StartAtUtc,
     DateTimeOffset EndAtUtc,
     string Status,
+    IReadOnlyList<string> AllowedTransitions,
+    bool CanAssignTechnician,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc);

@@ -23,6 +23,9 @@ public sealed class AppointmentsController(
     [HttpPost]
     [Authorize(Policy =
         AuthorizationPolicies.AppointmentManage)]
+    [ProducesResponseType(
+        typeof(ContractResponse),
+        StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(
         CreateAppointmentRequest request,
         CancellationToken cancellationToken)
@@ -45,17 +48,34 @@ public sealed class AppointmentsController(
     }
 
     [HttpGet]
-    public async Task<ActionResult<
-        IReadOnlyList<ContractResponse>>> List(
+    [ProducesResponseType(
+        typeof(IReadOnlyList<ContractResponse>),
+        StatusCodes.Status200OK)]
+    public async Task<IActionResult> List(
+        [FromQuery] DateTimeOffset? from,
+        [FromQuery] DateTimeOffset? to,
+        [FromQuery] string? status,
+        [FromQuery] Guid? technicianId,
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<ApplicationResponse> appointments =
-            await service.ListAsync(cancellationToken);
+        Result<IReadOnlyList<ApplicationResponse>> result =
+            await service.ListAsync(
+                new AppointmentFilterData(
+                    from,
+                    to,
+                    status,
+                    technicianId),
+                cancellationToken);
 
-        return Ok(appointments.Select(Map));
+        return result.IsSuccess
+            ? Ok(result.Value.Select(Map))
+            : ToProblem(result.Error);
     }
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(
+        typeof(ContractResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> Get(
         Guid id,
         CancellationToken cancellationToken)
@@ -71,6 +91,9 @@ public sealed class AppointmentsController(
     [HttpPatch("{id:guid}/technician")]
     [Authorize(Policy =
         AuthorizationPolicies.AppointmentManage)]
+    [ProducesResponseType(
+        typeof(ContractResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> Assign(
         Guid id,
         AssignTechnicianRequest request,
@@ -88,6 +111,9 @@ public sealed class AppointmentsController(
     }
 
     [HttpPatch("{id:guid}/status")]
+    [ProducesResponseType(
+        typeof(ContractResponse),
+        StatusCodes.Status200OK)]
     public async Task<IActionResult> Transition(
         Guid id,
         AppointmentStatusRequest request,
@@ -129,11 +155,17 @@ public sealed class AppointmentsController(
         return new ContractResponse(
             response.Id,
             response.CustomerId,
+            response.CustomerNumber,
+            response.CustomerDisplayName,
             response.ServiceId,
+            response.ServiceName,
             response.TechnicianUserId,
+            response.TechnicianDisplayName,
             response.StartAtUtc,
             response.EndAtUtc,
             response.Status,
+            response.AllowedTransitions,
+            response.CanAssignTechnician,
             response.CreatedAtUtc,
             response.UpdatedAtUtc);
     }

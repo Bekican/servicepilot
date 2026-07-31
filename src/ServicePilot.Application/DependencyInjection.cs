@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 
 using ServicePilot.Application.Appointments;
+using ServicePilot.Application.Authentication;
 using ServicePilot.Application.Authentication.AcceptInvitation;
 using ServicePilot.Application.Authentication.Login;
 using ServicePilot.Application.Authentication.Register;
@@ -11,10 +12,12 @@ using ServicePilot.Application.Organizations.CreateOrganization;
 using ServicePilot.Application.Reminders;
 using ServicePilot.Application.Services;
 using ServicePilot.Application.Users.Invitations.CreateInvitation;
+using ServicePilot.Application.Users.Invitations.ListInvitations;
 using ServicePilot.Application.Users.Invitations.ResendInvitation;
 using ServicePilot.Application.Users.Management.ChangeUserRole;
 using ServicePilot.Application.Users.Management.ChangeUserStatus;
 using ServicePilot.Application.Users.Management.ListUsers;
+using ServicePilot.Application.Users.Technicians;
 
 namespace ServicePilot.Application;
 
@@ -28,11 +31,14 @@ public static class DependencyInjection
         services.AddScoped<RegisterOrganizationOwnerHandler>();
         services.AddScoped<LoginHandler>();
         services.AddScoped<AcceptInvitationHandler>();
+        services.AddScoped<CurrentSessionService>();
         services.AddScoped<CreateInvitationHandler>();
         services.AddScoped<ResendInvitationHandler>();
+        services.AddScoped<ListInvitationsHandler>();
         services.AddScoped<ListUsersHandler>();
         services.AddScoped<ChangeUserRoleHandler>();
         services.AddScoped<ChangeUserStatusHandler>();
+        services.AddScoped<TechnicianDirectoryService>();
         services.AddScoped<CustomerManagementService>();
         services.AddScoped<ServiceCatalogService>();
         services.AddScoped<AppointmentService>();

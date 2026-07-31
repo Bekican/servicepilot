@@ -9,9 +9,15 @@ public interface IAppointmentRepository
         Guid appointmentId,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<Appointment>> ListAsync(
+    Task<AppointmentDetails?> GetDetailsAsync(
         Guid organizationId,
-        Guid? technicianUserId,
+        Guid appointmentId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<AppointmentDetails>>
+        ListDetailsAsync(
+        Guid organizationId,
+        AppointmentQuery query,
         CancellationToken cancellationToken = default);
 
     Task<bool> HasTechnicianOverlapAsync(

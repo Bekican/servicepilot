@@ -58,6 +58,9 @@ one codebase and share PostgreSQL while module boundaries are kept explicit.
 - Entity Framework Core
 - Docker
 - Mailpit
+- Next.js 16 App Router
+- TypeScript
+- Tailwind CSS and shadcn/ui
 - xUnit
 - Testcontainers
 
@@ -102,11 +105,16 @@ Implemented:
 - Health/readiness endpoints, safe HTTP logging and API security headers
 - Fixed-window rate limits for authentication and invitation endpoints
 - Containerized API, Worker, PostgreSQL and Mailpit demo environment
+- Next.js BFF with an HttpOnly JWT session cookie
+- Responsive dashboard based on real tenant-scoped API data
+- Login, registration and invitation acceptance screens
+- Customer, service, user, appointment and reminder operations
+- Organization-time-zone scheduling with UTC API persistence
 
-Not yet implemented:
+Deferred beyond the current MVP:
 
-- Employee application use cases and API endpoints
-- Frontend user interface
+- Employee application use cases beyond technician assignment
+- Inventory, payments, customer satisfaction and advanced reporting
 
 ## Engineering Goals
 
@@ -142,12 +150,24 @@ Email: owner@servicepilot.local
 Password: Demo1234!
 ```
 
-The API is available at `http://localhost:5267`; Mailpit accepts SMTP traffic
-on `localhost:1025` and its web interface is available at
-`http://localhost:8025`.
+The web application is available at `http://localhost:3000`, the API at
+`http://localhost:5267`, and Mailpit at `http://localhost:8025`. Mailpit accepts
+SMTP traffic on `localhost:1025`.
 
-Infrastructure-only development remains available with
+Backend infrastructure-only development remains available with
 `docker compose up -d postgres mailpit`.
+
+For frontend-only development:
+
+```powershell
+cd apps/web
+Copy-Item .env.example .env.local
+npm ci
+npm run dev
+```
+
+The frontend talks to the API only from the Next.js server/BFF. Browser code
+never receives the JWT access token.
 
 The local invitation link base URL and SMTP sender are configured in
 `appsettings.Development.json`. Production values must be supplied through

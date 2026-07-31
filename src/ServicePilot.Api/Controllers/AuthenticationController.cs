@@ -1,10 +1,7 @@
-using System.IdentityModel.Tokens.Jwt;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
-using ServicePilot.Application.Abstractions.Tenancy;
 using ServicePilot.Application.Authentication;
 using ServicePilot.Application.Authentication.AcceptInvitation;
 using ServicePilot.Application.Authentication.Login;
@@ -22,7 +19,7 @@ public sealed class AuthenticationController(
     RegisterOrganizationOwnerHandler registerHandler,
     LoginHandler loginHandler,
     AcceptInvitationHandler acceptInvitationHandler,
-    ITenantContext tenantContext)
+    CurrentSessionService currentSessionService)
     : ControllerBase
 {
     [AllowAnonymous]
@@ -46,7 +43,8 @@ public sealed class AuthenticationController(
             request.FirstName,
             request.LastName,
             request.Email,
-            request.Password);
+            request.Password,
+            request.TimeZoneId);
 
         Result<AuthenticationResponse> result =
             await registerHandler.HandleAsync(
@@ -140,26 +138,29 @@ public sealed class AuthenticationController(
         StatusCodes.Status200OK)]
     [ProducesResponseType(
         StatusCodes.Status401Unauthorized)]
-    public ActionResult<CurrentUserResponse> Me()
+    public async Task<ActionResult<CurrentUserResponse>> Me(
+        CancellationToken cancellationToken)
     {
-        string? userIdValue =
-            User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-        string? role =
-            User.FindFirst(
-                AuthenticationClaimNames.Role)?.Value;
+        CurrentSessionResponse? session =
+            await currentSessionService.GetAsync(
+                cancellationToken);
 
-        if (!Guid.TryParse(
-            userIdValue,
-            out Guid userId)
-            || string.IsNullOrWhiteSpace(role))
+        if (session is null)
         {
             return Unauthorized();
         }
 
         return Ok(new CurrentUserResponse(
-            userId,
-            tenantContext.OrganizationId,
-            role));
+            session.UserId,
+            session.OrganizationId,
+            session.OrganizationName,
+            session.OrganizationSlug,
+            session.TimeZoneId,
+            session.FirstName,
+            session.LastName,
+            session.Email,
+            session.Role,
+            session.Capabilities));
     }
 
     private ObjectResult ToProblem(Error error)

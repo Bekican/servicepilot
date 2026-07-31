@@ -10,6 +10,18 @@ internal sealed class OrganizationRepository(
     ServicePilotDbContext dbContext)
     : IOrganizationRepository
 {
+    public Task<Organization?> GetByIdAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default)
+    {
+        return dbContext.Organizations
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                organization =>
+                    organization.Id == organizationId,
+                cancellationToken);
+    }
+
     public Task<Organization?> GetBySlugAsync(
         string slug,
         CancellationToken cancellationToken = default)

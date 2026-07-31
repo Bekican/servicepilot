@@ -28,6 +28,10 @@ public static class AuthenticationErrors
         "Authentication.OrganizationSlugAlreadyExists",
         "An organization with this slug already exists");
 
+    public static readonly Error InvalidTimeZone = new(
+        "Authentication.InvalidTimeZone",
+        "Organization time zone is invalid");
+
     public static readonly Error FirstNameIsRequired = new(
         "Authentication.FirstNameIsRequired",
         "First name is required");

@@ -28,6 +28,11 @@ internal sealed class OrganizationConfiguration
             .HasMaxLength(Organization.MaxSlugLength)
             .IsRequired();
 
+        builder.Property(organization => organization.TimeZoneId)
+            .HasColumnName("time_zone_id")
+            .HasMaxLength(Organization.MaxTimeZoneIdLength)
+            .IsRequired();
+
         builder.Property(organization => organization.CreatedAtUtc)
             .HasColumnName("created_at_utc")
             .IsRequired();

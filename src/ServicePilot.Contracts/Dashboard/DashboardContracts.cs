@@ -1,7 +1,8 @@
 namespace ServicePilot.Contracts.Dashboard;
 
 public sealed record DashboardSummaryResponse(
-    DateOnly DateUtc,
+    DateOnly Date,
+    string TimeZoneId,
     int ActiveCustomerCount,
     int ActiveUserCount,
     int ScheduledAppointmentCount,
