@@ -57,6 +57,23 @@ function Get-CaddyRootFingerprint
     return ($output -split "\s+")[0]
 }
 
+function New-SmokePassword
+{
+    $randomBytes = New-Object byte[] 24
+    $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try
+    {
+        $generator.GetBytes($randomBytes)
+    }
+    finally
+    {
+        $generator.Dispose()
+    }
+
+    $randomHex = [System.BitConverter]::ToString($randomBytes).Replace("-", "")
+    return "Sp!9aA-$randomHex"
+}
+
 if (-not (Test-Path -LiteralPath $environmentFile))
 {
     throw "Run scripts/start-staging-local.ps1 before this verification."
@@ -66,7 +83,7 @@ $suffix = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss") `
     + "-" `
     + [Guid]::NewGuid().ToString("N").Substring(0, 6)
 $env:STAGING_SMOKE_SUFFIX = $suffix.ToLowerInvariant()
-$env:STAGING_SMOKE_PASSWORD = "StagingSmoke123!"
+$env:STAGING_SMOKE_PASSWORD = New-SmokePassword
 $env:SERVICEPILOT_STAGING_URL = "https://localhost:8443"
 $env:SERVICEPILOT_STAGING_MAILPIT_URL = `
     "https://localhost:8443"
