@@ -1,0 +1,9 @@
+{
+  "releaseId": "sha-0123456789abcdef",
+  "images": {
+    "api": "ghcr.io/example/servicepilot-api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "web": "ghcr.io/example/servicepilot-web@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "worker": "ghcr.io/example/servicepilot-worker@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "migrator": "ghcr.io/example/servicepilot-migrator@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  }
+}

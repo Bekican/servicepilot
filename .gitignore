@@ -5,6 +5,9 @@
 
 # dotenv files
 .env
+.env.*
+!.env.example
+!.env.*.example
 
 # User-specific files
 *.rsuser
@@ -424,6 +427,10 @@ autom4te.cache/
 tarballs/
 test-results/
 playwright-report/
+
+# Local database recovery artefacts and release state
+backups/
+.deploy-state/
 
 # content below from: https://github.com/github/gitignore/blob/main/Global/macOS.gitignore
 # General

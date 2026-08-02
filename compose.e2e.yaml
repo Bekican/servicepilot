@@ -22,6 +22,20 @@ services:
       - "11025:1025"
       - "18025:8025"
 
+  migrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__Database: >-
+        Host=postgres;Port=5432;Database=servicepilot_e2e;
+        Username=servicepilot_e2e;Password=e2e-only-password
+    restart: "no"
+
   api:
     build:
       context: .
@@ -29,6 +43,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
       mailpit:
         condition: service_started
     environment:
@@ -44,7 +60,7 @@ services:
       Smtp__FromName: ServicePilot E2E
       Invitations__PublicBaseUrl: >-
         http://127.0.0.1:13000/invitations/accept
-      Database__MigrateOnStartup: "true"
+      Database__MigrateOnStartup: "false"
     ports:
       - "15267:8080"
   worker:

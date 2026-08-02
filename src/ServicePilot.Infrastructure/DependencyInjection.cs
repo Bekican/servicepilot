@@ -31,6 +31,14 @@ namespace ServicePilot.Infrastructure;
 
 public static class DependencyInjection
 {
+    public static IServiceCollection AddMigrationInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        AddDatabase(services, configuration);
+        return services;
+    }
+
     public static IServiceCollection AddWorkerInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)

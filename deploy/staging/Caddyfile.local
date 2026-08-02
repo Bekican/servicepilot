@@ -1,0 +1,31 @@
+{$STAGING_HTTP_ADDRESS} {
+	redir {$STAGING_HTTPS_ADDRESS}{uri} permanent
+}
+
+{$STAGING_HTTPS_ADDRESS} {
+	tls internal
+	encode zstd gzip
+
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	handle /ops/api/ready {
+		rewrite * /health/ready
+		reverse_proxy api:8080
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+{$STAGING_MAILPIT_ADDRESS} {
+	tls internal
+	encode zstd gzip
+	reverse_proxy mailpit:8025
+}

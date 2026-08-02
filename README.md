@@ -262,3 +262,126 @@ Run the complete gate from the repository root:
 
 The isolated stack uses web `13000`, API `15267`, PostgreSQL `15432` and
 Mailpit `18025`. It is removed after the run, including when a test fails.
+
+## Database migrator
+
+Production-oriented deployments use `ServicePilot.Migrator` as a one-shot
+process before API, Web and Worker are updated. The process applies pending EF
+Core migrations and exits with `0`; an error exits with `1`. Running it again
+against an up-to-date database is safe and also exits successfully.
+
+Provide the database connection string through configuration rather than a
+command-line argument:
+
+```powershell
+$env:ConnectionStrings__Database = "Host=...;Database=...;Username=...;Password=..."
+dotnet run --project src/ServicePilot.Migrator
+```
+
+The E2E Compose environment runs this migrator before starting the API and
+executes it a second time as an idempotency check. The local demo may continue
+to use startup migration for developer convenience; staging and production
+keep `Database:MigrateOnStartup=false`.
+
+## Local staging runtime
+
+The production-shaped local staging stack is isolated from the normal demo by
+its Compose project, networks and volumes. Only Caddy publishes host ports;
+Web, API, Worker and PostgreSQL remain on private container networks. The API
+does not migrate on startup: the one-shot Migrator must complete before the
+application services start.
+
+Start it from the repository root:
+
+```powershell
+.\scripts\start-staging-local.ps1
+```
+
+The first run creates the ignored `.env.staging.local` file from
+`deploy/staging/.env.local.example`. Its values are local-only placeholders and
+must never be copied to a public staging or production server.
+
+Local endpoints:
+
+```text
+Web:           https://localhost:8443
+API readiness: https://localhost:8443/ops/api/ready
+Mailpit:       https://mailpit.localhost:8443
+HTTP redirect: http://localhost:8080
+```
+
+Caddy issues these certificates from its internal CA. The browser may warn
+until that local root certificate is trusted. The local Caddyfile deliberately
+does not send HSTS, because HSTS on `localhost` would also affect the normal
+HTTP demo on port `3000`.
+
+Stop the local staging containers without deleting their data:
+
+```powershell
+.\scripts\stop-staging-local.ps1
+```
+
+Run the HTTPS smoke and persistence gate while local staging is running:
+
+```powershell
+.\scripts\verify-staging-local.ps1
+```
+
+The gate creates an isolated organization through the real UI, creates a
+Customer and Service, sends and accepts a Technician invitation through
+Mailpit, restarts every long-running staging container, and logs in again to
+prove that PostgreSQL data survived. It also verifies that Caddy kept the same
+local CA certificate across the restart. Raw invitation tokens are kept only
+in test memory and Playwright tracing is disabled for this staging flow.
+
+## CI and immutable images
+
+The `Quality Gate` GitHub Actions workflow runs for pull requests and pushes to
+`main`. It uses the same `scripts/verify-mvp.ps1` command as local development,
+so local and CI acceptance rules cannot drift apart. The EF CLI version is
+pinned in `.config/dotnet-tools.json` and restored by the verification script.
+
+Container publication is deliberately separate from deployment. Run the
+`Publish Immutable Images` workflow manually for the exact commit that should
+become a release candidate. It first calls the complete quality gate and only
+then publishes API, Web, Worker and Migrator images to GitHub Container
+Registry with tags in this form:
+
+```text
+ghcr.io/<owner>/servicepilot-api:sha-<git-commit>
+ghcr.io/<owner>/servicepilot-web:sha-<git-commit>
+ghcr.io/<owner>/servicepilot-worker:sha-<git-commit>
+ghcr.io/<owner>/servicepilot-migrator:sha-<git-commit>
+```
+
+These tags identify source commits. Because registry tags are technically
+mutable, staging and production deployment must resolve and pin the published
+image digest for all four services. A digest identifies the exact bytes that
+passed the gate; a later rebuild cannot silently change an active deployment.
+
+## PostgreSQL recovery and release rollback
+
+While local staging is running, take a custom-format PostgreSQL backup and
+prove that it can be restored into an isolated verification database:
+
+```powershell
+.\scripts\verify-recovery-local.ps1
+```
+
+Rehearse a local manifest-driven release and return to the previous application
+images with:
+
+```powershell
+.\scripts\deploy-staging-local.ps1 `
+  -ReleaseManifest .\deploy\staging\release-manifest.local.example.json `
+  -AllowMutableLocalImages `
+  -SkipPull
+
+.\scripts\rollback-staging-local.ps1
+```
+
+Remote staging and production manifests must pin every image with
+`@sha256:<digest>`. Application rollback never restores PostgreSQL or runs a
+down migration. See
+`docs/operations/postgresql-recovery-and-release-rollback.md` for the recovery
+model, production backup requirements and incident procedure.

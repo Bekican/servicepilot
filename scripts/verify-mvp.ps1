@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $e2eCompose = Join-Path $repositoryRoot "compose.e2e.yaml"
-$webDirectory = Join-Path $repositoryRoot "apps\web"
+$webDirectory = Join-Path (Join-Path $repositoryRoot "apps") "web"
 $originalNodeEnvironment = $env:NODE_ENV
 Remove-Item Env:NODE_ENV -ErrorAction SilentlyContinue
 
@@ -52,7 +52,9 @@ try
     Assert-LastExitCode "Backend tests"
 
     Write-Host "[3/8] Migration drift"
-    dotnet ef migrations has-pending-model-changes `
+    dotnet tool restore
+    Assert-LastExitCode ".NET tool restore"
+    dotnet tool run dotnet-ef migrations has-pending-model-changes `
         --project src/ServicePilot.Infrastructure `
         --startup-project src/ServicePilot.Api `
         --no-build
@@ -88,6 +90,9 @@ try
     Assert-LastExitCode "E2E environment startup"
     Wait-ForHttp "http://127.0.0.1:15267/health/ready"
     Wait-ForHttp "http://127.0.0.1:13000/login"
+
+    docker compose -f $e2eCompose run --rm migrator
+    Assert-LastExitCode "Idempotent migration check"
 
     Write-Host "[8/8] Playwright acceptance tests"
     Push-Location $webDirectory

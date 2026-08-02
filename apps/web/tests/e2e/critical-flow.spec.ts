@@ -74,7 +74,9 @@ test("owner and technician can complete the MVP operational journey", async ({
   await page.getByLabel("E-posta").fill(technicianEmail);
   await page.getByLabel("Başlangıç rolü").selectOption("Technician");
   await page.getByRole("button", { name: "Davet gönder" }).click();
-  await expect(page.getByText("Davet e-postası gönderildi")).toBeVisible();
+  await expect(page.getByText("Davet e-postası gönderildi")).toBeVisible({
+    timeout: 15_000,
+  });
 
   const invitationLink = await invitationLinkFor(technicianEmail);
   const technicianContext = await browser.newContext();

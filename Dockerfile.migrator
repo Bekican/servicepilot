@@ -1,0 +1,19 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /source
+COPY . .
+RUN dotnet restore src/ServicePilot.Migrator/ServicePilot.Migrator.csproj \
+    -p:NuGetAudit=false
+RUN dotnet publish src/ServicePilot.Migrator/ServicePilot.Migrator.csproj \
+    --configuration Release \
+    --no-restore \
+    --output /app/publish
+
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /app/publish .
+USER $APP_UID
+ENTRYPOINT ["dotnet", "ServicePilot.Migrator.dll"]

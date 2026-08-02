@@ -1,0 +1,9 @@
+{
+  "releaseId": "local-staging-current",
+  "images": {
+    "api": "servicepilot-staging-api:local",
+    "web": "servicepilot-staging-web:local",
+    "worker": "servicepilot-staging-worker:local",
+    "migrator": "servicepilot-staging-migrator:local"
+  }
+}

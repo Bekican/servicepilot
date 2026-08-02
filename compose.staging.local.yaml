@@ -1,0 +1,147 @@
+name: servicepilot-staging-local
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - backend
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    restart: unless-stopped
+    networks:
+      - edge
+      - backend
+
+  migrator:
+    image: ${SERVICEPILOT_MIGRATOR_IMAGE:-servicepilot-staging-migrator:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.migrator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: Staging
+      ConnectionStrings__Database: >-
+        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    restart: "no"
+    networks:
+      - backend
+
+  api:
+    image: ${SERVICEPILOT_API_IMAGE:-servicepilot-staging-api:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Staging
+      ConnectionStrings__Database: >-
+        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      Smtp__Host: mailpit
+      Smtp__Port: 1025
+      Smtp__EnableSsl: "false"
+      Smtp__FromAddress: no-reply@servicepilot.staging.local
+      Smtp__FromName: ServicePilot Staging
+      Invitations__PublicBaseUrl: ${PUBLIC_BASE_URL}/invitations/accept
+      Database__MigrateOnStartup: "false"
+    networks:
+      - backend
+
+  worker:
+    image: ${SERVICEPILOT_WORKER_IMAGE:-servicepilot-staging-worker:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      DOTNET_ENVIRONMENT: Staging
+      ConnectionStrings__Database: >-
+        Host=postgres;Port=5432;Database=${POSTGRES_DB};
+        Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Smtp__Host: mailpit
+      Smtp__Port: 1025
+      Smtp__EnableSsl: "false"
+      Smtp__FromAddress: no-reply@servicepilot.staging.local
+      Smtp__FromName: ServicePilot Staging
+      Invitations__PublicBaseUrl: ${PUBLIC_BASE_URL}/invitations/accept
+    networks:
+      - backend
+
+  web:
+    image: ${SERVICEPILOT_WEB_IMAGE:-servicepilot-staging-web:local}
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      SERVICEPILOT_API_URL: http://api:8080
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    networks:
+      - edge
+      - backend
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+      web:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    environment:
+      STAGING_HTTP_ADDRESS: ${STAGING_HTTP_ADDRESS}
+      STAGING_HTTPS_ADDRESS: ${STAGING_HTTPS_ADDRESS}
+      STAGING_MAILPIT_ADDRESS: ${STAGING_MAILPIT_ADDRESS}
+    ports:
+      - "${STAGING_HTTP_PORT}:8080"
+      - "${STAGING_HTTPS_PORT}:8443"
+    volumes:
+      - ./deploy/staging/Caddyfile.local:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+      - backend
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  edge:
+  backend:
+    internal: true
