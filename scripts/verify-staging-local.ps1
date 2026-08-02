@@ -59,19 +59,9 @@ function Get-CaddyRootFingerprint
 
 function New-SmokePassword
 {
-    $randomBytes = New-Object byte[] 24
-    $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-    try
-    {
-        $generator.GetBytes($randomBytes)
-    }
-    finally
-    {
-        $generator.Dispose()
-    }
-
-    $randomHex = [System.BitConverter]::ToString($randomBytes).Replace("-", "")
-    return "Sp!9aA-$randomHex"
+    $firstPart = [Guid]::NewGuid().ToString("N")
+    $secondPart = [Guid]::NewGuid().ToString("N")
+    return "Sp!9aA-$firstPart$secondPart"
 }
 
 if (-not (Test-Path -LiteralPath $environmentFile))
