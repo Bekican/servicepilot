@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Yeni Randevu" };
 export default async function NewAppointmentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; supportCode?: string }>;
 }) {
   const query = await searchParams;
   const session = await requireSession();
@@ -40,7 +40,7 @@ export default async function NewAppointmentPage({
         description="Müşteri, hizmet, zaman ve opsiyonel teknisyen seçimi."
         title="Yeni Randevu"
       />
-      <ActionMessage error={query.error} />
+      <ActionMessage error={query.error} supportCode={query.supportCode} />
       {ready ? (
         <Card className="max-w-2xl">
           <CardHeader>

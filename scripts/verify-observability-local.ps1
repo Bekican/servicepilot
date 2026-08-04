@@ -38,8 +38,14 @@ try
     Invoke-Compose exec -T caddy sh -c $probeCommand
     Start-Sleep -Seconds 15
 
-    $collectorLogs = Invoke-Compose logs --no-color `
-        otel-collector | Out-String
+    $collectorLogs = docker compose `
+        --env-file $environmentFile `
+        -f $composeFile `
+        logs --no-color otel-collector 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0)
+    {
+        throw "Collector log read failed."
+    }
 
     $requiredValues = @(
         "service.name: Str(ServicePilot.Api)",
@@ -47,6 +53,8 @@ try
         "service.name: Str(ServicePilot.Migrator)",
         "Name           : GET api/auth/me",
         "servicepilot.correlation_id: Str($correlationId)",
+        "EventName: ApiRequestCompleted",
+        "ProblemCode: Str(Authentication.Required)",
         "Name           : reminder.process_due",
         "Name           : retention.run",
         "Name           : database.migrate"

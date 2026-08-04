@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using ServicePilot.Api.Authentication;
+using ServicePilot.Api.Errors;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Services;
 using ServicePilot.Contracts.Services;
@@ -12,8 +13,9 @@ namespace ServicePilot.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.ActiveUser)]
 [Route("api/services")]
 public sealed class ServicesController(
-    ServiceCatalogService service)
-    : ControllerBase
+    ServiceCatalogService service,
+    ApiProblemDetailsFactory problemFactory)
+    : ServicePilotControllerBase(problemFactory)
 {
     [HttpPost]
     [Authorize(Policy =
@@ -113,23 +115,6 @@ public sealed class ServicesController(
         return result.IsSuccess
             ? Ok(Map(result.Value))
             : ToProblem(result.Error);
-    }
-
-    private ObjectResult ToProblem(Error error)
-    {
-        int statusCode =
-            error == ServiceCatalogErrors.NotFound
-                ? StatusCodes.Status404NotFound
-                : error
-                    == ServiceCatalogErrors
-                        .NameAlreadyExists
-                    ? StatusCodes.Status409Conflict
-                    : StatusCodes.Status400BadRequest;
-
-        return Problem(
-            statusCode: statusCode,
-            title: error.Code,
-            detail: error.Message);
     }
 
     private static ServiceResponse Map(

@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { createServerApiClient } from "@/lib/api/server-client";
-import { problemMessage } from "@/lib/api/problem-details";
+import {
+  problemActionState,
+  problemSearchParams,
+} from "@/lib/api/problem-details";
 import { formValues, type ActionState } from "@/lib/action-state";
 
 const optional = (value: FormDataEntryValue | null) => {
@@ -55,7 +58,7 @@ export async function createCustomerAction(
   });
 
   if (!data) {
-    return { error: problemMessage(error), values: formValues(formData) };
+    return { ...problemActionState(error), values: formValues(formData) };
   }
 
   revalidatePath("/customers");
@@ -76,7 +79,7 @@ export async function updateCustomerAction(
   });
 
   if (!data) {
-    return { error: problemMessage(error), values: formValues(formData) };
+    return { ...problemActionState(error), values: formValues(formData) };
   }
 
   revalidatePath("/customers");
@@ -96,9 +99,7 @@ export async function deactivateCustomerAction(id: string) {
   );
 
   if (!response.ok) {
-    redirect(
-      `/customers/${id}?error=${encodeURIComponent(problemMessage(error))}`,
-    );
+    redirect(`/customers/${id}?${problemSearchParams(error)}`);
   }
 
   revalidatePath("/customers");
@@ -132,7 +133,7 @@ export async function addAddressAction(
   );
 
   if (!data) {
-    return { error: problemMessage(error), values: formValues(formData) };
+    return { ...problemActionState(error), values: formValues(formData) };
   }
 
   revalidatePath(`/customers/${customerId}`);
@@ -152,9 +153,7 @@ export async function setPrimaryAddressAction(
   );
 
   if (!data) {
-    redirect(
-      `/customers/${customerId}?error=${encodeURIComponent(problemMessage(error))}`,
-    );
+    redirect(`/customers/${customerId}?${problemSearchParams(error)}`);
   }
 
   revalidatePath(`/customers/${customerId}`);
@@ -171,9 +170,7 @@ export async function deactivateAddressAction(
   );
 
   if (!response.ok) {
-    redirect(
-      `/customers/${customerId}?error=${encodeURIComponent(problemMessage(error))}`,
-    );
+    redirect(`/customers/${customerId}?${problemSearchParams(error)}`);
   }
 
   revalidatePath(`/customers/${customerId}`);

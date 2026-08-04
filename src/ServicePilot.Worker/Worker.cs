@@ -8,6 +8,9 @@ public sealed class Worker(
     ILogger<Worker> logger)
     : BackgroundService
 {
+    private static readonly EventId CycleFailedEvent =
+        new(2001, "ReminderCycleFailed");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -44,8 +47,10 @@ public sealed class Worker(
             catch (Exception exception)
             {
                 logger.LogError(
-                    exception,
-                    "Reminder processing cycle failed");
+                    CycleFailedEvent,
+                    "Reminder processing cycle failed with "
+                    + "{ExceptionType}",
+                    exception.GetType().Name);
             }
 
             await Task.Delay(

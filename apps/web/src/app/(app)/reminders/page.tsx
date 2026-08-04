@@ -28,7 +28,12 @@ export const metadata: Metadata = { title: "Hatırlatmalar" };
 export default async function RemindersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; error?: string; success?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    error?: string;
+    success?: string;
+    supportCode?: string;
+  }>;
 }) {
   const query = await searchParams;
   const session = await requireSession();
@@ -57,7 +62,11 @@ export default async function RemindersPage({
         description="Worker gönderimleri, denemeler ve kullanıcıya görünür hatalar."
         title="Hatırlatmalar"
       />
-      <ActionMessage error={query.error} success={query.success} />
+      <ActionMessage
+        error={query.error}
+        success={query.success}
+        supportCode={query.supportCode}
+      />
 
       {reminders.length ? (
         <Card className="overflow-hidden py-0">

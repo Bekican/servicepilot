@@ -1,6 +1,16 @@
 import { AlertCircle } from "lucide-react";
 
-export function FormError({ id, message }: { id?: string; message?: string }) {
+import { SupportCode } from "@/components/shared/support-code";
+
+export function FormError({
+  id,
+  message,
+  supportCode,
+}: {
+  id?: string;
+  message?: string;
+  supportCode?: string;
+}) {
   if (!message) return null;
 
   return (
@@ -11,7 +21,10 @@ export function FormError({ id, message }: { id?: string; message?: string }) {
       role="alert"
     >
       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      <span>{message}</span>
+      <span>
+        <span>{message}</span>
+        <SupportCode value={supportCode} />
+      </span>
     </div>
   );
 }

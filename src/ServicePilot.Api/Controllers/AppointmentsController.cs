@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using ServicePilot.Api.Authentication;
+using ServicePilot.Api.Errors;
 using ServicePilot.Application.Appointments;
 using ServicePilot.Application.Common;
 using ServicePilot.Contracts.Appointments;
@@ -17,8 +18,9 @@ namespace ServicePilot.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.ActiveUser)]
 [Route("api/appointments")]
 public sealed class AppointmentsController(
-    AppointmentService service)
-    : ControllerBase
+    AppointmentService service,
+    ApiProblemDetailsFactory problemFactory)
+    : ServicePilotControllerBase(problemFactory)
 {
     [HttpPost]
     [Authorize(Policy =
@@ -128,25 +130,6 @@ public sealed class AppointmentsController(
         return result.IsSuccess
             ? Ok(Map(result.Value))
             : ToProblem(result.Error);
-    }
-
-    private ObjectResult ToProblem(Error error)
-    {
-        int statusCode =
-            error == AppointmentErrors.NotFound
-                ? StatusCodes.Status404NotFound
-                : error == AppointmentErrors.Forbidden
-                    ? StatusCodes.Status403Forbidden
-                    : error
-                        == AppointmentErrors
-                            .TechnicianOverlap
-                        ? StatusCodes.Status409Conflict
-                        : StatusCodes.Status400BadRequest;
-
-        return Problem(
-            statusCode: statusCode,
-            title: error.Code,
-            detail: error.Message);
     }
 
     private static ContractResponse Map(

@@ -29,7 +29,11 @@ export function AddressForm({ customerId }: { customerId: string }) {
       className="space-y-4"
       key={state.values ? JSON.stringify(state.values) : "initial"}
     >
-      <FormError id="address-form-error" message={state.error} />
+      <FormError
+        id="address-form-error"
+        message={state.error}
+        supportCode={state.supportCode}
+      />
       <AddressField
         defaultValue={state.values?.label}
         label="Etiket"

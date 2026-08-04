@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { problemMessage } from "@/lib/api/problem-details";
+import {
+  problemActionState,
+  problemSearchParams,
+} from "@/lib/api/problem-details";
 import { createServerApiClient } from "@/lib/api/server-client";
 import { formValues, type ActionState } from "@/lib/action-state";
 
@@ -24,7 +27,7 @@ export async function createServiceAction(
   });
 
   if (!data) {
-    return { error: problemMessage(error), values: formValues(formData) };
+    return { ...problemActionState(error), values: formValues(formData) };
   }
 
   revalidatePath("/services");
@@ -45,7 +48,7 @@ export async function updateServiceAction(
   });
 
   if (!data) {
-    return { error: problemMessage(error), values: formValues(formData) };
+    return { ...problemActionState(error), values: formValues(formData) };
   }
 
   revalidatePath("/services");
@@ -62,7 +65,7 @@ export async function setServiceStatusAction(id: string, isActive: boolean) {
   });
 
   if (!data) {
-    redirect(`/services?error=${encodeURIComponent(problemMessage(error))}`);
+    redirect(`/services?${problemSearchParams(error)}`);
   }
 
   revalidatePath("/services");

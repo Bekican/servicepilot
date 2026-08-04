@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using ServicePilot.Api.Authentication;
+using ServicePilot.Api.Errors;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Reminders;
 
@@ -14,8 +15,9 @@ namespace ServicePilot.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.ActiveUser)]
 [Route("api/reminders")]
 public sealed class RemindersController(
-    ReminderManagementService service)
-    : ControllerBase
+    ReminderManagementService service,
+    ApiProblemDetailsFactory problemFactory)
+    : ServicePilotControllerBase(problemFactory)
 {
     [HttpGet]
     public async Task<ActionResult<
@@ -48,13 +50,7 @@ public sealed class RemindersController(
 
         return result.IsSuccess
             ? Ok(Map(result.Value))
-            : Problem(
-                statusCode:
-                    result.Error == ReminderErrors.NotFound
-                        ? StatusCodes.Status404NotFound
-                        : StatusCodes.Status409Conflict,
-                title: result.Error.Code,
-                detail: result.Error.Message);
+            : ToProblem(result.Error);
     }
 
     private static ContractResponse Map(

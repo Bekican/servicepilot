@@ -1,16 +1,19 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Globalization;
 using System.Text;
 using System.Threading.RateLimiting;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 using OpenTelemetry.Trace;
 
 using ServicePilot.Api.Authentication;
+using ServicePilot.Api.Errors;
 using ServicePilot.Api.Health;
 using ServicePilot.Api.Observability;
 using ServicePilot.Application;
@@ -25,6 +28,10 @@ using ServicePilot.Observability;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.AddFilter(
+    "Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddleware",
+    LogLevel.None);
+
 builder.AddServicePilotObservability(
     "ServicePilot.Api",
     tracing => tracing.AddAspNetCoreInstrumentation(
@@ -38,9 +45,45 @@ builder.AddServicePilotObservability(
 JwtOptions jwtOptions =
     JwtOptions.FromConfiguration(builder.Configuration);
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory =
+            actionContext =>
+            {
+                Dictionary<string, string[]> errors =
+                    actionContext.ModelState
+                        .Where(pair =>
+                            pair.Value?.Errors.Count > 0)
+                        .ToDictionary(
+                            pair => pair.Key,
+                            pair => pair.Value!.Errors
+                                .Select(_ =>
+                                    "The field is invalid.")
+                                .Distinct(
+                                    StringComparer.Ordinal)
+                                .ToArray(),
+                            StringComparer.Ordinal);
+                ApiProblemDetailsFactory factory =
+                    actionContext.HttpContext
+                        .RequestServices
+                        .GetRequiredService<
+                            ApiProblemDetailsFactory>();
+                BadRequestObjectResult result = new(
+                    factory.CreateValidation(
+                        actionContext.HttpContext,
+                        errors));
+                result.ContentTypes.Add(
+                    "application/problem+json");
+                return result;
+            };
+    });
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+builder.Services.AddSingleton<ApiProblemDetailsFactory>();
+builder.Services.AddExceptionHandler<
+    GlobalExceptionHandler>();
 builder.Services
     .AddHealthChecks()
     .AddCheck<DatabaseReadinessHealthCheck>(
@@ -50,6 +93,34 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode =
         StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (
+        context,
+        cancellationToken) =>
+    {
+        if (context.Lease.TryGetMetadata(
+                MetadataName.RetryAfter,
+                out TimeSpan retryAfter))
+        {
+            int retryAfterSeconds = Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    retryAfter.TotalSeconds));
+            context.HttpContext.Response.Headers
+                .RetryAfter = retryAfterSeconds.ToString(
+                    CultureInfo.InvariantCulture);
+        }
+
+        ApiProblemDetailsFactory factory =
+            context.HttpContext.RequestServices
+                .GetRequiredService<
+                    ApiProblemDetailsFactory>();
+        await factory.WriteAsync(
+            context.HttpContext,
+            ApiProblemCodes.RateLimitExceeded,
+            StatusCodes.Status429TooManyRequests,
+            "Too many requests. Try again later.",
+            cancellationToken);
+    };
     options.AddPolicy(
         "authentication",
         httpContext =>
@@ -177,6 +248,43 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler();
+app.UseStatusCodePages(async statusCodeContext =>
+{
+    HttpContext httpContext =
+        statusCodeContext.HttpContext;
+    (string Code, string Detail) problem =
+        httpContext.Response.StatusCode switch
+        {
+            StatusCodes.Status401Unauthorized =>
+                (
+                    ApiProblemCodes
+                        .AuthenticationRequired,
+                    "Authentication is required."),
+            StatusCodes.Status403Forbidden =>
+                (
+                    ApiProblemCodes
+                        .AuthorizationForbidden,
+                    "The operation is not allowed."),
+            StatusCodes.Status404NotFound =>
+                (
+                    ApiProblemCodes.HttpNotFound,
+                    "The requested resource was not found."),
+            _ =>
+                (
+                    ApiProblemCodes.Unexpected,
+                    "The request could not be completed.")
+        };
+
+    ApiProblemDetailsFactory factory =
+        httpContext.RequestServices.GetRequiredService<
+            ApiProblemDetailsFactory>();
+    await factory.WriteAsync(
+        httpContext,
+        problem.Code,
+        httpContext.Response.StatusCode,
+        problem.Detail,
+        httpContext.RequestAborted);
+});
 app.Use(async (context, next) =>
 {
     context.Response.Headers.XContentTypeOptions =

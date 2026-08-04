@@ -11,9 +11,9 @@ export const metadata: Metadata = { title: "Yeni müşteri" };
 export default async function NewCustomerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; supportCode?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, supportCode } = await searchParams;
 
   return (
     <>
@@ -21,7 +21,7 @@ export default async function NewCustomerPage({
         description="İletişim bilgileri opsiyoneldir; verildiğinde tenant içinde benzersizdir."
         title="Yeni Müşteri"
       />
-      <ActionMessage error={error} />
+      <ActionMessage error={error} supportCode={supportCode} />
       <Card className="max-w-4xl">
         <CardContent>
           <CustomerForm

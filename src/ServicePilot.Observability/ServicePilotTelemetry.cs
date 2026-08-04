@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Text.Json;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -30,6 +31,27 @@ public static class ServicePilotTelemetry
             string serviceName,
             Action<TracerProviderBuilder>? configureTracing = null)
     {
+        if (builder.Environment.IsStaging()
+            || builder.Environment.IsProduction())
+        {
+            builder.Logging.ClearProviders();
+            builder.Logging.AddJsonConsole(options =>
+            {
+                options.IncludeScopes = false;
+                options.TimestampFormat =
+                    "yyyy-MM-dd'T'HH:mm:ss.fff'Z'";
+                options.UseUtcTimestamp = true;
+                options.JsonWriterOptions =
+                    new JsonWriterOptions
+                    {
+                        Indented = false
+                    };
+            });
+            builder.Logging.AddFilter(
+                "Microsoft.EntityFrameworkCore.Database.Command",
+                LogLevel.Warning);
+        }
+
         if (!IsEnabled(builder))
         {
             return builder;

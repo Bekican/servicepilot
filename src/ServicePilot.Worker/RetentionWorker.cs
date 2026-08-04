@@ -9,6 +9,9 @@ public sealed class RetentionWorker(
     ILogger<RetentionWorker> logger)
     : BackgroundService
 {
+    private static readonly EventId CycleFailedEvent =
+        new(2101, "RetentionCycleFailed");
+
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
@@ -50,8 +53,10 @@ public sealed class RetentionWorker(
             catch (Exception exception)
             {
                 logger.LogError(
-                    exception,
-                    "Retention cycle failed");
+                    CycleFailedEvent,
+                    "Retention cycle failed with "
+                    + "{ExceptionType}",
+                    exception.GetType().Name);
             }
 
             await Task.Delay(

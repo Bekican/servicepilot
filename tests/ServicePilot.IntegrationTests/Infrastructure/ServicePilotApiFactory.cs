@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Infrastructure.Persistence;
@@ -14,6 +15,8 @@ namespace ServicePilot.IntegrationTests.Infrastructure;
 public sealed class ServicePilotApiFactory
     : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private readonly TestLogSink _logSink = new();
+
     private readonly PostgreSqlContainer _postgresContainer =
         new PostgreSqlBuilder("postgres:17-alpine")
             .WithDatabase("servicepilot_tests")
@@ -24,6 +27,9 @@ public sealed class ServicePilotApiFactory
     protected override void ConfigureWebHost(
         IWebHostBuilder builder)
     {
+        builder.ConfigureLogging(logging =>
+            logging.AddProvider(
+                _logSink.CreateProvider()));
         builder.UseEnvironment("Testing");
         builder.UseSetting(
             "ConnectionStrings:Database",
@@ -43,6 +49,9 @@ public sealed class ServicePilotApiFactory
 
         builder.ConfigureServices(services =>
         {
+            services.AddControllers().AddApplicationPart(
+                typeof(TestingFailureController).Assembly);
+
             services.RemoveAll<
                 DbContextOptions<ServicePilotDbContext>>();
 
@@ -64,6 +73,8 @@ public sealed class ServicePilotApiFactory
 
     public FakeEmailSender EmailSender =>
         Services.GetRequiredService<FakeEmailSender>();
+
+    public TestLogSink LogSink => _logSink;
 
     public string ConnectionString =>
         _postgresContainer.GetConnectionString();

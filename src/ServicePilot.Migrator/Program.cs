@@ -26,6 +26,8 @@ await using AsyncServiceScope scope =
 ILogger logger = scope.ServiceProvider
     .GetRequiredService<ILoggerFactory>()
     .CreateLogger("ServicePilot.Migrator");
+EventId migrationFailedEvent =
+    new(3001, "DatabaseMigrationFailed");
 
 try
 {
@@ -67,7 +69,8 @@ try
 catch (Exception exception)
 {
     logger.LogCritical(
-        exception,
-        "Database migration failed.");
+        migrationFailedEvent,
+        "Database migration failed with {ExceptionType}.",
+        exception.GetType().Name);
     return 1;
 }

@@ -26,7 +26,11 @@ export default async function CustomerDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; success?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
+    supportCode?: string;
+  }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -63,7 +67,11 @@ export default async function CustomerDetailPage({
             : `${customer.firstName ?? ""} ${customer.lastName ?? ""}`
         }
       />
-      <ActionMessage error={query.error} success={query.success} />
+      <ActionMessage
+        error={query.error}
+        success={query.success}
+        supportCode={query.supportCode}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(340px,0.8fr)]">
         <Card>

@@ -71,7 +71,11 @@ export function AppointmentForm({
       className="space-y-6"
       key={state.values ? JSON.stringify(state.values) : "initial"}
     >
-      <FormError id="appointment-form-error" message={state.error} />
+      <FormError
+        id="appointment-form-error"
+        message={state.error}
+        supportCode={state.supportCode}
+      />
       <input name="startAt" type="hidden" value={instants?.startAt ?? ""} />
       <input name="endAt" type="hidden" value={instants?.endAt ?? ""} />
 

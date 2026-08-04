@@ -36,7 +36,11 @@ export function CustomerForm({
       className="space-y-7"
       key={state.values ? JSON.stringify(state.values) : "initial"}
     >
-      <FormError id="customer-form-error" message={state.error} />
+      <FormError
+        id="customer-form-error"
+        message={state.error}
+        supportCode={state.supportCode}
+      />
       <div className="space-y-2">
         <Label htmlFor="type">Müşteri türü</Label>
         <select

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
 using ServicePilot.Api.Authentication;
+using ServicePilot.Api.Errors;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Users.Invitations;
 using ServicePilot.Application.Users.Invitations.CreateInvitation;
@@ -19,8 +20,9 @@ namespace ServicePilot.Api.Controllers;
 public sealed class UserInvitationsController(
     CreateInvitationHandler createHandler,
     ResendInvitationHandler resendHandler,
-    ListInvitationsHandler listHandler)
-    : ControllerBase
+    ListInvitationsHandler listHandler,
+    ApiProblemDetailsFactory problemFactory)
+    : ServicePilotControllerBase(problemFactory)
 {
     [HttpGet]
     [ProducesResponseType(
@@ -102,31 +104,6 @@ public sealed class UserInvitationsController(
         }
 
         return Ok(MapResponse(result.Value));
-    }
-
-    private ObjectResult ToProblem(Error error)
-    {
-        int statusCode = error switch
-        {
-            _ when error == InvitationErrors.NotFound =>
-                StatusCodes.Status404NotFound,
-            _ when error
-                is var conflict
-                && (
-                    conflict == InvitationErrors.UserAlreadyExists
-                    || conflict == InvitationErrors.NotPending
-                    || conflict == InvitationErrors.ConcurrentRequest) =>
-                StatusCodes.Status409Conflict,
-            _ when error
-                == InvitationErrors.EmailDeliveryFailed =>
-                StatusCodes.Status503ServiceUnavailable,
-            _ => StatusCodes.Status400BadRequest
-        };
-
-        return Problem(
-            statusCode: statusCode,
-            title: error.Code,
-            detail: error.Message);
     }
 
     private static UserInvitationResponse MapResponse(

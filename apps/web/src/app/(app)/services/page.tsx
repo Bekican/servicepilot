@@ -22,7 +22,11 @@ export const metadata: Metadata = { title: "Hizmetler" };
 export default async function ServicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; success?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
+    supportCode?: string;
+  }>;
 }) {
   const query = await searchParams;
   const session = await requireSession();
@@ -39,7 +43,11 @@ export default async function ServicesPage({
         description="Randevu süresini otomatik hesaplayan servis kataloğu."
         title="Hizmetler"
       />
-      <ActionMessage error={query.error} success={query.success} />
+      <ActionMessage
+        error={query.error}
+        success={query.success}
+        supportCode={query.supportCode}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">

@@ -11,4 +11,9 @@ export type User = ApiSchema["UserResponse"];
 export type Invitation = ApiSchema["UserInvitationResponse"];
 export type Technician = ApiSchema["TechnicianResponse"];
 export type DashboardSummary = ApiSchema["DashboardSummaryResponse"];
-export type ProblemDetails = ApiSchema["ProblemDetails"];
+export type ProblemDetails = ApiSchema["ProblemDetails"] & {
+  code?: string;
+  traceId?: string;
+  correlationId?: string;
+  errors?: Record<string, string[]>;
+};

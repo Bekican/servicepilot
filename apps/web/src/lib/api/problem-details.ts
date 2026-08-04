@@ -1,6 +1,15 @@
 import type { ProblemDetails } from "@/lib/api/types";
+import { isValidCorrelationId } from "@/lib/observability/correlation-id";
 
 const translatedMessages: Record<string, string> = {
+  "Request.ValidationFailed": "Gönderilen bilgileri kontrol edin.",
+  "Authentication.Required": "Devam etmek için tekrar giriş yapın.",
+  "Authorization.Forbidden": "Bu işlem için yetkiniz bulunmuyor.",
+  "Http.NotFound": "İstenen kayıt veya sayfa bulunamadı.",
+  "Http.RateLimitExceeded":
+    "Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin.",
+  "System.Unexpected": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.",
+  "System.UnmappedError": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.",
   "Authentication.InvalidCredentials":
     "Organizasyon, e-posta veya parola hatalı.",
   "Authentication.OrganizationSlugAlreadyExists":
@@ -30,9 +39,46 @@ export function problemMessage(
     return fallback;
   }
 
-  if (problem.title && translatedMessages[problem.title]) {
-    return translatedMessages[problem.title];
+  const code = problem.code ?? problem.title;
+
+  if (code && translatedMessages[code]) {
+    return translatedMessages[code];
   }
 
   return problem.detail || fallback;
+}
+
+export function problemPresentation(
+  problem: ProblemDetails | undefined,
+  fallback?: string,
+) {
+  return {
+    message: problemMessage(problem, fallback),
+    supportCode: isValidCorrelationId(problem?.correlationId)
+      ? problem.correlationId
+      : undefined,
+  };
+}
+
+export function problemActionState(
+  problem: ProblemDetails | undefined,
+  fallback?: string,
+) {
+  const presentation = problemPresentation(problem, fallback);
+  return {
+    error: presentation.message,
+    supportCode: presentation.supportCode,
+  };
+}
+
+export function problemSearchParams(
+  problem: ProblemDetails | undefined,
+  fallback?: string,
+) {
+  const presentation = problemPresentation(problem, fallback);
+  const params = new URLSearchParams({ error: presentation.message });
+  if (presentation.supportCode) {
+    params.set("supportCode", presentation.supportCode);
+  }
+  return params.toString();
 }

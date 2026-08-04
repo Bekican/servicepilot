@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using ServicePilot.Api.Authentication;
+using ServicePilot.Api.Errors;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Customers;
 using ServicePilot.Contracts.Customers;
@@ -21,8 +22,9 @@ namespace ServicePilot.Api.Controllers;
 [Authorize(Policy = AuthorizationPolicies.ActiveUser)]
 [Route("api/customers")]
 public sealed class CustomersController(
-    CustomerManagementService service)
-    : ControllerBase
+    CustomerManagementService service,
+    ApiProblemDetailsFactory problemFactory)
+    : ServicePilotControllerBase(problemFactory)
 {
     [HttpPost]
     [Authorize(Policy =
@@ -205,26 +207,6 @@ public sealed class CustomersController(
         return result.IsSuccess
             ? Ok(Map(result.Value))
             : ToProblem(result.Error);
-    }
-
-    private ObjectResult ToProblem(Error error)
-    {
-        int statusCode =
-            error == CustomerErrors.NotFound
-                || error == CustomerErrors.AddressNotFound
-                ? StatusCodes.Status404NotFound
-                : error == CustomerErrors.EmailAlreadyExists
-                    || error == CustomerErrors.PhoneAlreadyExists
-                    || error
-                        == CustomerErrors
-                            .PrimaryAddressConflict
-                    ? StatusCodes.Status409Conflict
-                    : StatusCodes.Status400BadRequest;
-
-        return Problem(
-            statusCode: statusCode,
-            title: error.Code,
-            detail: error.Message);
     }
 
     private static CustomerData MapData(

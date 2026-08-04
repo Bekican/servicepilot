@@ -3,8 +3,9 @@
 import { useActionState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, ArrowRight, LoaderCircle } from "lucide-react";
+import { ArrowRight, LoaderCircle } from "lucide-react";
 
+import { FormError } from "@/components/shared/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,15 +63,7 @@ export function AuthForm({
 
   return (
     <form action={formAction} className="space-y-5">
-      {state.error ? (
-        <div
-          className="border-destructive/25 bg-destructive/5 text-destructive flex gap-2 rounded-lg border p-3 text-sm"
-          role="alert"
-        >
-          <AlertCircle className="mt-0.5 size-4 shrink-0" />
-          <span>{state.error}</span>
-        </div>
-      ) : null}
+      <FormError message={state.error} supportCode={state.supportCode} />
 
       {mode === "register" ? (
         <>

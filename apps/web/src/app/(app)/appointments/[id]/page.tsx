@@ -24,7 +24,11 @@ export default async function AppointmentDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; success?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
+    supportCode?: string;
+  }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -47,7 +51,11 @@ export default async function AppointmentDetailPage({
         description={`${appointment.customerNumber} · ${session.timeZoneId}`}
         title={appointment.customerDisplayName}
       />
-      <ActionMessage error={query.error} success={query.success} />
+      <ActionMessage
+        error={query.error}
+        success={query.success}
+        supportCode={query.supportCode}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_380px]">
         <Card>

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using ServicePilot.Api.Authentication;
+using ServicePilot.Api.Errors;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Users.Management;
 using ServicePilot.Application.Users.Management.ChangeUserRole;
@@ -22,8 +23,9 @@ namespace ServicePilot.Api.Controllers;
 public sealed class UsersController(
     ListUsersHandler listHandler,
     ChangeUserRoleHandler changeRoleHandler,
-    ChangeUserStatusHandler changeStatusHandler)
-    : ControllerBase
+    ChangeUserStatusHandler changeStatusHandler,
+    ApiProblemDetailsFactory problemFactory)
+    : ServicePilotControllerBase(problemFactory)
 {
     [HttpGet]
     [ProducesResponseType(
@@ -92,29 +94,6 @@ public sealed class UsersController(
         return result.IsSuccess
             ? Ok(MapResponse(result.Value))
             : ToProblem(result.Error);
-    }
-
-    private ObjectResult ToProblem(Error error)
-    {
-        int statusCode =
-            error == UserManagementErrors.NotFound
-                ? StatusCodes.Status404NotFound
-                : error
-                    is var conflict
-                    && (
-                        conflict
-                            == UserManagementErrors
-                                .SelfModificationNotAllowed
-                        || conflict
-                            == UserManagementErrors
-                                .LastActiveOwner)
-                    ? StatusCodes.Status409Conflict
-                    : StatusCodes.Status400BadRequest;
-
-        return Problem(
-            statusCode: statusCode,
-            title: error.Code,
-            detail: error.Message);
     }
 
     private static ContractUserResponse MapResponse(

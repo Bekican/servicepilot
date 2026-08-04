@@ -1,11 +1,16 @@
 using System.Diagnostics;
 
+using ServicePilot.Api.Errors;
+
 namespace ServicePilot.Api.Observability;
 
 public sealed class CorrelationIdMiddleware(
     RequestDelegate next,
     ILogger<CorrelationIdMiddleware> logger)
 {
+    private static readonly EventId RequestCompletedEvent =
+        new(1000, "ApiRequestCompleted");
+
     public const string HeaderName = "X-Correlation-ID";
     public const string ItemName = "ServicePilot.CorrelationId";
 
@@ -40,24 +45,48 @@ public sealed class CorrelationIdMiddleware(
             if (!context.Request.Path.StartsWithSegments(
                     "/health"))
             {
-                string route = context.GetEndpoint()?
-                    .Metadata.GetMetadata<RouteNameMetadata>()?
-                    .RouteName
-                    ?? context.GetEndpoint()?
-                        .Metadata.GetMetadata<
-                            Microsoft.AspNetCore.Routing.RouteEndpoint>()?
-                        .RoutePattern.RawText
+                string route = (
+                    context.GetEndpoint()
+                        as Microsoft.AspNetCore.Routing
+                            .RouteEndpoint)?
+                    .RoutePattern.RawText
                     ?? "unmatched";
+                string problemCode =
+                    context.Items[
+                        ApiProblemDetailsFactory
+                            .ProblemCodeItemName]
+                        as string
+                    ?? string.Empty;
+                string traceId = Activity.Current?
+                    .TraceId.ToHexString()
+                    ?? string.Empty;
+                string spanId = Activity.Current?
+                    .SpanId.ToHexString()
+                    ?? string.Empty;
+                LogLevel level =
+                    context.Response.StatusCode >= 500
+                        ? LogLevel.Error
+                        : context.Response.StatusCode
+                            == StatusCodes
+                                .Status429TooManyRequests
+                            ? LogLevel.Warning
+                            : LogLevel.Information;
 
-                logger.LogInformation(
+                logger.Log(
+                    level,
+                    RequestCompletedEvent,
                     "HTTP {RequestMethod} {Route} completed "
                     + "with {StatusCode} in {DurationMs} ms "
-                    + "({CorrelationId})",
+                    + "as {ProblemCode} "
+                    + "({TraceId}, {SpanId}, {CorrelationId})",
                     context.Request.Method,
                     route,
                     context.Response.StatusCode,
                     Stopwatch.GetElapsedTime(startedAt)
                         .TotalMilliseconds,
+                    problemCode,
+                    traceId,
+                    spanId,
                     correlationId);
             }
         }

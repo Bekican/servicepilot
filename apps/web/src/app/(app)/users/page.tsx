@@ -22,7 +22,11 @@ export const metadata: Metadata = { title: "Kullanıcılar" };
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; success?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
+    supportCode?: string;
+  }>;
 }) {
   const query = await searchParams;
   const session = await requireSession();
@@ -40,7 +44,11 @@ export default async function UsersPage({
         description="Roller, kullanıcı durumu ve tek kullanımlık e-posta davetleri."
         title="Kullanıcılar"
       />
-      <ActionMessage error={query.error} success={query.success} />
+      <ActionMessage
+        error={query.error}
+        success={query.success}
+        supportCode={query.supportCode}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_380px]">
         <Card className="overflow-hidden py-0">

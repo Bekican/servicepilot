@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -90,6 +91,16 @@ public sealed class SecurityHardeningTests(
         Assert.Equal(
             HttpStatusCode.TooManyRequests,
             third.StatusCode);
+        using JsonDocument problem = JsonDocument.Parse(
+            await third.Content.ReadAsStringAsync());
+        Assert.Equal(
+            "Http.RateLimitExceeded",
+            problem.RootElement
+                .GetProperty("code")
+                .GetString());
+        Assert.True(
+            third.Headers.RetryAfter?.Delta
+                > TimeSpan.Zero);
     }
 
     [Fact]

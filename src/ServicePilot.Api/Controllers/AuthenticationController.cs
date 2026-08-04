@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
 using ServicePilot.Application.Authentication;
+using ServicePilot.Api.Errors;
 using ServicePilot.Application.Authentication.AcceptInvitation;
 using ServicePilot.Application.Authentication.Login;
 using ServicePilot.Application.Authentication.Register;
@@ -19,8 +20,9 @@ public sealed class AuthenticationController(
     RegisterOrganizationOwnerHandler registerHandler,
     LoginHandler loginHandler,
     AcceptInvitationHandler acceptInvitationHandler,
-    CurrentSessionService currentSessionService)
-    : ControllerBase
+    CurrentSessionService currentSessionService,
+    ApiProblemDetailsFactory problemFactory)
+    : ServicePilotControllerBase(problemFactory)
 {
     [AllowAnonymous]
     [HttpPost("register")]
@@ -161,31 +163,6 @@ public sealed class AuthenticationController(
             session.Email,
             session.Role,
             session.Capabilities));
-    }
-
-    private ObjectResult ToProblem(Error error)
-    {
-        int statusCode = error switch
-        {
-            _ when error
-                == AuthenticationErrors.InvalidCredentials =>
-                    StatusCodes.Status401Unauthorized,
-            _ when error
-                == AuthenticationErrors.OrganizationSlugAlreadyExists =>
-                    StatusCodes.Status409Conflict,
-            _ when error
-                == AuthenticationErrors.EmailAlreadyExists =>
-                    StatusCodes.Status409Conflict,
-            _ when error
-                == InvitationErrors.UserAlreadyExists =>
-                    StatusCodes.Status409Conflict,
-            _ => StatusCodes.Status400BadRequest
-        };
-
-        return Problem(
-            statusCode: statusCode,
-            title: error.Code,
-            detail: error.Message);
     }
 
     private static AuthenticationTokenResponse MapResponse(

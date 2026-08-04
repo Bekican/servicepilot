@@ -48,7 +48,11 @@ export function ServiceForm({
       key={state.values ? JSON.stringify(state.values) : "initial"}
     >
       <div className={mode === "update" ? "sm:col-span-3" : undefined}>
-        <FormError id={errorId} message={state.error} />
+        <FormError
+          id={errorId}
+          message={state.error}
+          supportCode={state.supportCode}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor={`name-${idSuffix}`}>Hizmet adı</Label>

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { problemMessage } from "@/lib/api/problem-details";
+import { problemSearchParams } from "@/lib/api/problem-details";
 import { createServerApiClient } from "@/lib/api/server-client";
 
 export async function retryReminderAction(id: string) {
@@ -13,7 +13,7 @@ export async function retryReminderAction(id: string) {
   });
 
   if (!data) {
-    redirect(`/reminders?error=${encodeURIComponent(problemMessage(error))}`);
+    redirect(`/reminders?${problemSearchParams(error)}`);
   }
 
   revalidatePath("/reminders");

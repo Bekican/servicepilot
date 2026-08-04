@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { problemMessage } from "@/lib/api/problem-details";
+import { problemPresentation } from "@/lib/api/problem-details";
 import {
   createAnonymousApiClient,
   sessionCookieName,
@@ -12,6 +12,7 @@ import {
 
 export type AuthActionState = {
   error?: string;
+  supportCode?: string;
 };
 
 const loginSchema = z.object({
@@ -73,7 +74,8 @@ export async function loginAction(
   });
 
   if (!data) {
-    return { error: problemMessage(error) };
+    const problem = problemPresentation(error);
+    return { error: problem.message, supportCode: problem.supportCode };
   }
 
   await setSession(data.accessToken, data.expiresAtUtc);
@@ -98,7 +100,8 @@ export async function registerAction(
   });
 
   if (!data) {
-    return { error: problemMessage(error) };
+    const problem = problemPresentation(error);
+    return { error: problem.message, supportCode: problem.supportCode };
   }
 
   await setSession(data.accessToken, data.expiresAtUtc);
@@ -121,9 +124,11 @@ export async function acceptInvitationAction(
   });
 
   if (!data) {
-    return {
-      error: problemMessage(error, "Davet geçersiz veya süresi dolmuş."),
-    };
+    const problem = problemPresentation(
+      error,
+      "Davet geçersiz veya süresi dolmuş.",
+    );
+    return { error: problem.message, supportCode: problem.supportCode };
   }
 
   await setSession(data.accessToken, data.expiresAtUtc);

@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { problemMessage } from "@/lib/api/problem-details";
+import {
+  problemActionState,
+  problemSearchParams,
+} from "@/lib/api/problem-details";
 import { createServerApiClient } from "@/lib/api/server-client";
 import { formValues, type ActionState } from "@/lib/action-state";
 
@@ -25,7 +28,7 @@ export async function createAppointmentAction(
   });
 
   if (!data) {
-    return { error: problemMessage(error), values: formValues(formData) };
+    return { ...problemActionState(error), values: formValues(formData) };
   }
 
   revalidatePath("/appointments");
@@ -46,9 +49,7 @@ export async function assignTechnicianAction(id: string, formData: FormData) {
   );
 
   if (!data) {
-    redirect(
-      `/appointments/${id}?error=${encodeURIComponent(problemMessage(error))}`,
-    );
+    redirect(`/appointments/${id}?${problemSearchParams(error)}`);
   }
 
   revalidatePath(`/appointments/${id}`);
@@ -67,9 +68,7 @@ export async function transitionAppointmentAction(id: string, status: string) {
   });
 
   if (!data) {
-    redirect(
-      `/appointments/${id}?error=${encodeURIComponent(problemMessage(error))}`,
-    );
+    redirect(`/appointments/${id}?${problemSearchParams(error)}`);
   }
 
   revalidatePath(`/appointments/${id}`);

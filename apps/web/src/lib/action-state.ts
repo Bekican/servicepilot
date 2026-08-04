@@ -1,5 +1,6 @@
 export type ActionState = {
   error?: string;
+  supportCode?: string;
   redirectTo?: string;
   values?: Record<string, string>;
 };

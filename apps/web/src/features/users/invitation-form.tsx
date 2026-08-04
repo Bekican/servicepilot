@@ -31,7 +31,11 @@ export function InvitationForm() {
       className="space-y-4"
       key={state.values ? JSON.stringify(state.values) : "initial"}
     >
-      <FormError id="invitation-form-error" message={state.error} />
+      <FormError
+        id="invitation-form-error"
+        message={state.error}
+        supportCode={state.supportCode}
+      />
       <div className="space-y-2">
         <Label htmlFor="invitation-email">E-posta</Label>
         <Input

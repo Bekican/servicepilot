@@ -1,10 +1,14 @@
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
+import { SupportCode } from "@/components/shared/support-code";
+
 export function ActionMessage({
   error,
+  supportCode,
   success,
 }: {
   error?: string;
+  supportCode?: string;
   success?: string;
 }) {
   if (!error && !success) return null;
@@ -23,7 +27,10 @@ export function ActionMessage({
       ) : (
         <CheckCircle2 className="size-4" />
       )}
-      {error ?? success}
+      <span>
+        <span>{error ?? success}</span>
+        {error ? <SupportCode value={supportCode} /> : null}
+      </span>
     </div>
   );
 }

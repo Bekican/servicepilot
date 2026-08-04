@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { problemMessage } from "@/lib/api/problem-details";
+import {
+  problemActionState,
+  problemSearchParams,
+} from "@/lib/api/problem-details";
 import { createServerApiClient } from "@/lib/api/server-client";
 import { formValues, type ActionState } from "@/lib/action-state";
 
@@ -20,7 +23,7 @@ export async function createInvitationAction(
   });
 
   if (!data) {
-    return { error: problemMessage(error), values: formValues(formData) };
+    return { ...problemActionState(error), values: formValues(formData) };
   }
 
   revalidatePath("/users");
@@ -39,7 +42,7 @@ export async function resendInvitationAction(id: string) {
   );
 
   if (!data) {
-    redirect(`/users?error=${encodeURIComponent(problemMessage(error))}`);
+    redirect(`/users?${problemSearchParams(error)}`);
   }
 
   revalidatePath("/users");
@@ -54,7 +57,7 @@ export async function changeUserRoleAction(id: string, formData: FormData) {
   });
 
   if (!data) {
-    redirect(`/users?error=${encodeURIComponent(problemMessage(error))}`);
+    redirect(`/users?${problemSearchParams(error)}`);
   }
 
   revalidatePath("/users");
@@ -68,7 +71,7 @@ export async function changeUserStatusAction(id: string, isActive: boolean) {
   });
 
   if (!data) {
-    redirect(`/users?error=${encodeURIComponent(problemMessage(error))}`);
+    redirect(`/users?${problemSearchParams(error)}`);
   }
 
   revalidatePath("/users");
