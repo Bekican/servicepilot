@@ -13,6 +13,9 @@ namespace ServicePilot.IntegrationTests.Security;
 public sealed class SecurityHardeningTests(
     ServicePilotApiFactory factory)
 {
+    private const string CorrelationIdHeader =
+        "X-Correlation-ID";
+
     [Fact]
     public async Task Health_ShouldBeAnonymous_AndSetSecurityHeaders()
     {
@@ -87,5 +90,63 @@ public sealed class SecurityHardeningTests(
         Assert.Equal(
             HttpStatusCode.TooManyRequests,
             third.StatusCode);
+    }
+
+    [Fact]
+    public async Task CorrelationId_ShouldBeGenerated_WhenMissing()
+    {
+        using HttpClient client = factory.CreateClient();
+
+        HttpResponseMessage response =
+            await client.GetAsync("/health/live");
+
+        string correlationId = response.Headers
+            .GetValues(CorrelationIdHeader)
+            .Single();
+        Assert.Matches("^[a-f0-9]{32}$", correlationId);
+    }
+
+    [Fact]
+    public async Task CorrelationId_ShouldPreserve_ValidWebValue()
+    {
+        using HttpClient client = factory.CreateClient();
+        using HttpRequestMessage request = new(
+            HttpMethod.Get,
+            "/health/live");
+        request.Headers.Add(
+            CorrelationIdHeader,
+            "web-request_1234");
+
+        HttpResponseMessage response =
+            await client.SendAsync(request);
+
+        Assert.Equal(
+            "web-request_1234",
+            response.Headers
+                .GetValues(CorrelationIdHeader)
+                .Single());
+    }
+
+    [Fact]
+    public async Task CorrelationId_ShouldReplace_UnsafeValue()
+    {
+        using HttpClient client = factory.CreateClient();
+        using HttpRequestMessage request = new(
+            HttpMethod.Get,
+            "/health/live");
+        request.Headers.TryAddWithoutValidation(
+            CorrelationIdHeader,
+            "unsafe value with spaces");
+
+        HttpResponseMessage response =
+            await client.SendAsync(request);
+
+        string correlationId = response.Headers
+            .GetValues(CorrelationIdHeader)
+            .Single();
+        Assert.NotEqual(
+            "unsafe value with spaces",
+            correlationId);
+        Assert.Matches("^[a-f0-9]{32}$", correlationId);
     }
 }

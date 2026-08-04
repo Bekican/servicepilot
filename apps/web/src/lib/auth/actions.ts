@@ -67,7 +67,7 @@ export async function loginAction(
     };
   }
 
-  const client = createAnonymousApiClient();
+  const client = await createAnonymousApiClient();
   const { data, error } = await client.POST("/api/auth/login", {
     body: parsed.data,
   });
@@ -92,7 +92,7 @@ export async function registerAction(
     };
   }
 
-  const client = createAnonymousApiClient();
+  const client = await createAnonymousApiClient();
   const { data, error } = await client.POST("/api/auth/register", {
     body: parsed.data,
   });
@@ -115,7 +115,7 @@ export async function acceptInvitationAction(
     return { error: "Ad, soyad ve en az 8 karakterli parola gereklidir." };
   }
 
-  const client = createAnonymousApiClient();
+  const client = await createAnonymousApiClient();
   const { data, error } = await client.POST("/api/auth/invitations/accept", {
     body: parsed.data,
   });

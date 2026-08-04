@@ -6,6 +6,7 @@
     <Project Path="src/ServicePilot.Domain/ServicePilot.Domain.csproj" />
     <Project Path="src/ServicePilot.Infrastructure/ServicePilot.Infrastructure.csproj" />
     <Project Path="src/ServicePilot.Migrator/ServicePilot.Migrator.csproj" />
+    <Project Path="src/ServicePilot.Observability/ServicePilot.Observability.csproj" />
     <Project Path="src/ServicePilot.Worker/ServicePilot.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">

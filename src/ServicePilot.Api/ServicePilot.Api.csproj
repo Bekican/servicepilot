@@ -15,11 +15,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ServicePilot.Application\ServicePilot.Application.csproj" />
     <ProjectReference Include="..\ServicePilot.Infrastructure\ServicePilot.Infrastructure.csproj" />
+    <ProjectReference Include="..\ServicePilot.Observability\ServicePilot.Observability.csproj" />
     <ProjectReference Include="..\ServicePilot.Contracts\ServicePilot.Contracts.csproj" />
   </ItemGroup>
 

@@ -1,4 +1,5 @@
 using ServicePilot.Application.Reminders;
+using ServicePilot.Observability;
 
 namespace ServicePilot.Worker;
 
@@ -13,6 +14,9 @@ public sealed class Worker(
         {
             try
             {
+                using System.Diagnostics.Activity? activity =
+                    ServicePilotTelemetry.StartActivity(
+                        "reminder.process_due");
                 await using AsyncServiceScope scope =
                     scopeFactory.CreateAsyncScope();
                 ReminderProcessor processor =
@@ -21,6 +25,9 @@ public sealed class Worker(
                 int processed =
                     await processor.ProcessDueAsync(
                         cancellationToken: stoppingToken);
+                activity?.SetTag(
+                    "servicepilot.reminder.processed_count",
+                    processed);
 
                 if (processed > 0)
                 {

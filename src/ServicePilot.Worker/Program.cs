@@ -1,8 +1,10 @@
 using ServicePilot.Application.Reminders;
 using ServicePilot.Infrastructure;
+using ServicePilot.Observability;
 using ServicePilot.Worker;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.AddServicePilotObservability("ServicePilot.Worker");
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ReminderProcessor>();
 builder.Services.AddWorkerInfrastructure(

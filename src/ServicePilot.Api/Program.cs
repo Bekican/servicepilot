@@ -5,12 +5,14 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+using OpenTelemetry.Trace;
+
 using ServicePilot.Api.Authentication;
 using ServicePilot.Api.Health;
+using ServicePilot.Api.Observability;
 using ServicePilot.Application;
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Tenancy;
@@ -19,8 +21,19 @@ using ServicePilot.Application.Authorization;
 using ServicePilot.Infrastructure;
 using ServicePilot.Infrastructure.Authentication;
 using ServicePilot.Infrastructure.Persistence;
+using ServicePilot.Observability;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+builder.AddServicePilotObservability(
+    "ServicePilot.Api",
+    tracing => tracing.AddAspNetCoreInstrumentation(
+        options =>
+        {
+            options.Filter = context =>
+                !context.Request.Path.StartsWithSegments(
+                    "/health");
+        }));
 
 JwtOptions jwtOptions =
     JwtOptions.FromConfiguration(builder.Configuration);
@@ -33,14 +46,6 @@ builder.Services
     .AddCheck<DatabaseReadinessHealthCheck>(
         "database",
         tags: ["ready"]);
-builder.Services.AddHttpLogging(options =>
-{
-    options.LoggingFields =
-        HttpLoggingFields.RequestMethod
-        | HttpLoggingFields.RequestPath
-        | HttpLoggingFields.ResponseStatusCode
-        | HttpLoggingFields.Duration;
-});
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode =
@@ -170,8 +175,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler();
-app.UseHttpLogging();
 app.Use(async (context, next) =>
 {
     context.Response.Headers.XContentTypeOptions =

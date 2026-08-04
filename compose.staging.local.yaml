@@ -26,6 +26,16 @@ services:
       - edge
       - backend
 
+  otel-collector:
+    image: otel/opentelemetry-collector:0.157.0
+    restart: unless-stopped
+    command:
+      - --config=/etc/otelcol/config.yaml
+    volumes:
+      - ./deploy/observability/otel-collector.local.yaml:/etc/otelcol/config.yaml:ro
+    networks:
+      - backend
+
   migrator:
     image: ${SERVICEPILOT_MIGRATOR_IMAGE:-servicepilot-staging-migrator:local}
     build:
@@ -34,11 +44,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     environment:
       DOTNET_ENVIRONMENT: Staging
       ConnectionStrings__Database: >-
         Host=postgres;Port=5432;Database=${POSTGRES_DB};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Observability__OtlpEnabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     restart: "no"
     networks:
       - backend
@@ -54,6 +69,8 @@ services:
         condition: service_completed_successfully
       mailpit:
         condition: service_started
+      otel-collector:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Staging
       ConnectionStrings__Database: >-
@@ -67,6 +84,9 @@ services:
       Smtp__FromName: ServicePilot Staging
       Invitations__PublicBaseUrl: ${PUBLIC_BASE_URL}/invitations/accept
       Database__MigrateOnStartup: "false"
+      Observability__OtlpEnabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     networks:
       - backend
 
@@ -79,6 +99,8 @@ services:
     depends_on:
       api:
         condition: service_started
+      otel-collector:
+        condition: service_started
     environment:
       DOTNET_ENVIRONMENT: Staging
       ConnectionStrings__Database: >-
@@ -90,6 +112,9 @@ services:
       Smtp__FromAddress: no-reply@servicepilot.staging.local
       Smtp__FromName: ServicePilot Staging
       Invitations__PublicBaseUrl: ${PUBLIC_BASE_URL}/invitations/accept
+      Observability__OtlpEnabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     networks:
       - backend
 

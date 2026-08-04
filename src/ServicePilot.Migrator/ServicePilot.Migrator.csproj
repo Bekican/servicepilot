@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ServicePilot.Infrastructure\ServicePilot.Infrastructure.csproj" />
+    <ProjectReference Include="..\ServicePilot.Observability\ServicePilot.Observability.csproj" />
   </ItemGroup>
 
 </Project>

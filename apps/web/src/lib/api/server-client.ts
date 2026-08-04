@@ -1,9 +1,13 @@
 import "server-only";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import createClient from "openapi-fetch";
 
 import type { paths } from "@/lib/api/generated/schema";
+import {
+  correlationIdHeader,
+  resolveCorrelationId,
+} from "@/lib/observability/correlation-id";
 
 export const sessionCookieName = "servicepilot_session";
 
@@ -14,22 +18,30 @@ function apiBaseUrl() {
   );
 }
 
-export function createAnonymousApiClient() {
+async function requestCorrelationId() {
+  const requestHeaders = await headers();
+  return resolveCorrelationId(requestHeaders.get(correlationIdHeader));
+}
+
+export async function createAnonymousApiClient() {
   return createClient<paths>({
     baseUrl: apiBaseUrl(),
+    headers: {
+      [correlationIdHeader]: await requestCorrelationId(),
+    },
   });
 }
 
 export async function createServerApiClient() {
   const cookieStore = await cookies();
   const token = cookieStore.get(sessionCookieName)?.value;
+  const correlationId = await requestCorrelationId();
 
   return createClient<paths>({
     baseUrl: apiBaseUrl(),
-    headers: token
-      ? {
-          Authorization: `Bearer ${token}`,
-        }
-      : undefined,
+    headers: {
+      [correlationIdHeader]: correlationId,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
 }

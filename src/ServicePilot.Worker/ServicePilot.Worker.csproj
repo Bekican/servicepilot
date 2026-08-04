@@ -14,5 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\ServicePilot.Application\ServicePilot.Application.csproj" />
     <ProjectReference Include="..\ServicePilot.Infrastructure\ServicePilot.Infrastructure.csproj" />
+    <ProjectReference Include="..\ServicePilot.Observability\ServicePilot.Observability.csproj" />
   </ItemGroup>
 </Project>
