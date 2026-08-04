@@ -32,6 +32,8 @@ jobs:
             dockerfile: Dockerfile.worker
           - component: migrator
             dockerfile: Dockerfile.migrator
+          - component: backup
+            dockerfile: Dockerfile.backup
 
     steps:
       - name: Check out source

@@ -80,14 +80,18 @@ schema release must use expand-and-contract:
 2. Deploy code that can work with both old and new schema.
 3. Remove obsolete schema only in a later release after the rollback window.
 
-## Production backup architecture
+## Off-site staging implementation and production boundary
 
-Before production, the same verified logical-backup flow will be scheduled
-nightly on the VPS. The production pipeline must add these operational layers:
+The real staging runtime implements the verified logical-backup flow with an
+encrypted Restic repository over an S3-compatible API. It supports manual,
+nightly and mandatory pre-deployment backups, configurable retention, an
+external success heartbeat and an isolated restore drill. See
+`staging-vps-and-offsite-backups.md` for provisioning and commands.
 
-- Encrypt before data leaves the VPS, preferably through an encrypted `restic`
-  repository rather than custom cryptography.
-- Copy to storage outside the VPS; the local Docker volume is not a backup.
+Production must reuse the proven mechanism with separate credentials, bucket
+prefix, repository password, database identity, network and schedule. It must
+also satisfy these operational layers:
+
 - Keep fourteen daily restore points plus the agreed weekly long-term points.
 - Alert when dump, archive validation, encryption or upload fails.
 - Perform and record a restore into staging at least monthly.

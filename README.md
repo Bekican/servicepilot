@@ -133,6 +133,27 @@ The project is also used to study:
 Architecture decisions are recorded under
 [`docs/architecture/decisions`](docs/architecture/decisions).
 
+## Provider-neutral VPS staging
+
+The repository includes a production-shaped staging Compose model, an
+immutable backup image and Linux operator scripts for deployment, rollback,
+nightly encrypted Restic backups and isolated restore drills. Only Caddy
+publishes public ports; the database and application services remain private.
+
+Provisioning requirements, first-release sequencing and recovery commands are
+documented in
+[`docs/operations/staging-vps-and-offsite-backups.md`](docs/operations/staging-vps-and-offsite-backups.md).
+Real domains, registry digests, database secrets, Restic credentials and
+S3-compatible endpoints belong in `/etc/servicepilot/staging.env`, never in
+source control.
+
+Run the free local S3-compatible backup and restore rehearsal with Docker
+Desktop and MinIO:
+
+```powershell
+.\scripts\verify-offsite-backup-local.ps1
+```
+
 ## Local Infrastructure
 
 Start the complete demo, apply migrations and create the idempotent demo

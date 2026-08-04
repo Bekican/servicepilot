@@ -1,0 +1,16 @@
+[Unit]
+Description=ServicePilot encrypted off-site PostgreSQL backup
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=servicepilot
+Group=servicepilot
+WorkingDirectory=/opt/servicepilot/staging
+ExecStart=/bin/sh /opt/servicepilot/staging/scripts/backup-staging.sh
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

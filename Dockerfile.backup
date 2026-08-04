@@ -1,0 +1,16 @@
+FROM postgres:17-alpine
+
+RUN apk add --no-cache curl jq restic
+
+COPY deploy/staging/operations/backup.sh /usr/local/bin/servicepilot-backup
+COPY deploy/staging/operations/restore-drill.sh /usr/local/bin/servicepilot-restore-drill
+
+RUN chmod 0555 \
+        /usr/local/bin/servicepilot-backup \
+        /usr/local/bin/servicepilot-restore-drill \
+    && mkdir -p /work \
+    && chown postgres:postgres /work
+
+USER postgres
+WORKDIR /work
+ENTRYPOINT ["/usr/local/bin/servicepilot-backup"]
