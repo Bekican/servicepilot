@@ -6,6 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+using OpenTelemetry;
+using OpenTelemetry.Context.Propagation;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -31,6 +33,9 @@ public static class ServicePilotTelemetry
             string serviceName,
             Action<TracerProviderBuilder>? configureTracing = null)
     {
+        Sdk.SetDefaultTextMapPropagator(
+            new TraceContextPropagator());
+
         if (builder.Environment.IsStaging()
             || builder.Environment.IsProduction())
         {
@@ -96,11 +101,14 @@ public static class ServicePilotTelemetry
                         }))
             .WithTracing(tracing =>
             {
+                tracing.SetSampler(
+                    new ParentBasedSampler(
+                        new AlwaysOnSampler()));
                 tracing.AddSource(ActivitySourceName);
                 tracing.AddHttpClientInstrumentation();
                 configureTracing?.Invoke(tracing);
                 tracing.AddProcessor(
-                    new SensitiveHttpTagProcessor());
+                    new AllowedTraceTagProcessor());
                 tracing.AddOtlpExporter();
             });
 

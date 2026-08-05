@@ -135,7 +135,8 @@ public sealed class ApiProblemDetailsFactory(
                 CorrelationIdMiddleware.ItemName]
                 as string
             ?? httpContext.TraceIdentifier;
-        string traceId = Activity.Current?
+        Activity? activity = Activity.Current;
+        string traceId = activity?
             .TraceId.ToHexString()
             ?? string.Empty;
 
@@ -144,12 +145,14 @@ public sealed class ApiProblemDetailsFactory(
         problem.Extensions["correlationId"] =
             correlationId;
         httpContext.Items[ProblemCodeItemName] = code;
+        activity?.SetTag(
+            "problem.code",
+            code);
 
         if (problem.Status >= 500)
         {
-            Activity.Current?.SetStatus(
-                ActivityStatusCode.Error,
-                code);
+            activity?.SetStatus(
+                ActivityStatusCode.Error);
         }
     }
 

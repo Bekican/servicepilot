@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\ServicePilot.Application\ServicePilot.Application.csproj" />
     <ProjectReference Include="..\..\src\ServicePilot.Domain\ServicePilot.Domain.csproj" />
     <ProjectReference Include="..\..\src\ServicePilot.Infrastructure\ServicePilot.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\ServicePilot.Observability\ServicePilot.Observability.csproj" />
   </ItemGroup>
 
 </Project>
