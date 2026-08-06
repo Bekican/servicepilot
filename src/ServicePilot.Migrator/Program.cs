@@ -28,13 +28,12 @@ ILogger logger = scope.ServiceProvider
     .CreateLogger("ServicePilot.Migrator");
 EventId migrationFailedEvent =
     new(3001, "DatabaseMigrationFailed");
+using System.Diagnostics.Activity? activity =
+    ServicePilotTelemetry.StartRootActivity(
+        "database.migrate");
 
 try
 {
-    using System.Diagnostics.Activity? activity =
-        ServicePilotTelemetry.StartActivity(
-            "database.migrate");
-
     ServicePilotDbContext dbContext =
         scope.ServiceProvider.GetRequiredService<
             ServicePilotDbContext>();
@@ -68,6 +67,9 @@ try
 }
 catch (Exception exception)
 {
+    ServicePilotTelemetry.RecordFailure(
+        activity,
+        exception);
     logger.LogCritical(
         migrationFailedEvent,
         "Database migration failed with {ExceptionType}.",

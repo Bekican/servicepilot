@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ServicePilot.Application\ServicePilot.Application.csproj" />
     <ProjectReference Include="..\ServicePilot.Domain\ServicePilot.Domain.csproj" />
+    <ProjectReference Include="..\ServicePilot.Observability\ServicePilot.Observability.csproj" />
   </ItemGroup>
 
   <ItemGroup>

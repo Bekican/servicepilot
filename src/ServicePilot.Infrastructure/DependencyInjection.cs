@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-
+using Npgsql;
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
@@ -26,6 +26,7 @@ using ServicePilot.Infrastructure.Reminders;
 using ServicePilot.Infrastructure.Retention;
 using ServicePilot.Infrastructure.Services;
 using ServicePilot.Infrastructure.Users;
+
 
 namespace ServicePilot.Infrastructure;
 
@@ -124,9 +125,42 @@ public static class DependencyInjection
             configuration.GetConnectionString("Database")
                 ?? throw new InvalidOperationException(
                     "Connection string 'Database' not found.");
-        services.AddDbContext<ServicePilotDbContext>(options =>
+
+        services.AddSingleton<
+            SafeDatabaseTracingInterceptor>();
+
+        services.AddSingleton(_ =>
         {
-            options.UseNpgsql(connectionString);
+            NpgsqlDataSourceBuilder dataSourceBuilder =
+                new(connectionString)
+                {
+                    Name = "ServicePilot.Database"
+                };
+
+            dataSourceBuilder.ConfigureTracing(options =>
+                options
+                    .ConfigureCommandFilter(_ => false)
+                    .ConfigureBatchFilter(_ => false)
+                    .ConfigureCopyOperationFilter(_ => false)
+                    .EnableFirstResponseEvent(false)
+                    .EnablePhysicalOpenTracing(false));
+
+            return dataSourceBuilder.Build();
         });
+
+        services.AddDbContext<ServicePilotDbContext>(
+            (serviceProvider, options) =>
+            {
+                NpgsqlDataSource dataSource =
+                    serviceProvider.GetRequiredService<
+                        NpgsqlDataSource>();
+                SafeDatabaseTracingInterceptor
+                    tracingInterceptor =
+                        serviceProvider.GetRequiredService<
+                            SafeDatabaseTracingInterceptor>();
+
+                options.UseNpgsql(dataSource);
+                options.AddInterceptors(tracingInterceptor);
+            });
     }
 }

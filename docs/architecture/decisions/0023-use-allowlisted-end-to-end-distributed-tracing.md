@@ -39,6 +39,12 @@ include raw URLs, query strings, database statements, exception messages and
 high-cardinality values. That is incompatible with ServicePilot's telemetry
 data-minimization rules.
 
+Native Npgsql tracing was also verified against a controlled database failure.
+Its failure activity contained exception events with an exception message and
+stack trace. Removing those fields only at the Collector would allow sensitive
+data to leave the application process before sanitization, so Collector-side
+redaction alone is not an acceptable boundary.
+
 ### Use W3C Propagation with an Explicit Attribute Allowlist
 
 Each runtime uses standard OpenTelemetry instrumentation and W3C Trace Context,
@@ -83,6 +89,9 @@ database.migrate
 Each Worker cycle and each Migrator execution starts a new root trace. A future
 message queue may carry `traceparent` in its message envelope, but no synthetic
 parent relationship will be invented before such a causal message exists.
+Root creation explicitly discards unrelated ambient activity context. Worker
+sleep intervals are outside the root span, so span duration represents only the
+actual processing cycle rather than its scheduling interval.
 
 ### Trace and Correlation Roles
 
@@ -110,6 +119,22 @@ operation names. Examples include:
 
 Raw identifiers, URLs and query values will not appear in span names.
 
+### Controlled Database Tracing
+
+PostgreSQL spans will be created by a custom EF Core `DbCommandInterceptor`
+using the `ServicePilot.Database` activity source. Native Npgsql activity
+export will remain disabled.
+
+The interceptor observes only the command lifecycle: start, successful
+completion, cancellation or failure, and elapsed time. It does not inspect or
+export command text, parameters, result rows, connection strings or exception
+messages. Database health checks are outside this interceptor's responsibility.
+
+Database spans use the stable name `postgresql.command`. They may contain only
+the database fields in the allowlist below. A PostgreSQL SQLSTATE may be
+retained as `db.response.status_code` only when it matches the controlled
+five-character SQLSTATE format. No exception event is added to the activity.
+
 ### Attribute Allowlist
 
 Telemetry emitted to the Collector may contain the following fields when they
@@ -123,6 +148,7 @@ are applicable:
 - `http.response.status_code`
 - `db.system.name`
 - `db.operation.name`
+- `db.response.status_code`
 - `exception.type`
 - `problem.code`
 - `servicepilot.correlation_id`
@@ -156,6 +182,12 @@ will not record exception details. Unexpected server and database failures will
 set the owning span status to `ERROR` and may record only the sanitized
 exception type.
 
+Worker shutdown cancellation is an expected lifecycle event and will not mark
+the cycle span as an error. Unexpected Worker failures mark the cycle span as
+`ERROR` before the Worker logs the safe exception type and continues with a
+later cycle. Migrator failures follow the same trace policy and retain their
+non-zero process exit code.
+
 Staging and production exporters will not emit exception message, stack trace
 or inner-exception data. Local development may display additional diagnostic
 detail outside the Collector pipeline.
@@ -179,6 +211,8 @@ Automated and local-staging verification will prove that:
 
 - Web and API share a trace and have the correct parent-child relationship.
 - PostgreSQL spans are children of the active API, Worker or Migrator span.
+- Database failure spans contain no activity events, exception messages or
+  stack traces.
 - Worker cycles and Migrator executions start independent root traces.
 - Invalid `traceparent` input is ignored safely.
 - Health endpoints do not create routine request traces.
@@ -201,7 +235,8 @@ test and will be expanded as each trace boundary is implemented.
 
 ## Negative Consequences
 
-- Next.js and database instrumentation add packages and runtime configuration.
+- Next.js tracing and custom database tracing add runtime configuration and
+  maintenance responsibility.
 - Strict sanitization requires processors, tests and ongoing review.
 - Removing raw SQL and exception details can make some investigations slower.
 - Exporting every initial trace consumes more backend capacity.

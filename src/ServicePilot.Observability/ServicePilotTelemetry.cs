@@ -18,6 +18,12 @@ public static class ServicePilotTelemetry
 {
     public const string ActivitySourceName =
         "ServicePilot.Operations";
+    
+    public const string DatabaseActivitySourceName = 
+        "ServicePilot.Database";
+    
+    private static readonly ActivitySource DatabaseSource = 
+        new(DatabaseActivitySourceName);
 
     private static readonly ActivitySource Source =
         new(ActivitySourceName);
@@ -26,6 +32,41 @@ public static class ServicePilotTelemetry
         string operationName,
         ActivityKind kind = ActivityKind.Internal) =>
         Source.StartActivity(operationName, kind);
+
+    public static Activity? StartRootActivity(
+        string operationName,
+        ActivityKind kind = ActivityKind.Internal)
+    {
+        Activity.Current = null;
+
+        return Source.StartActivity(
+            operationName,
+            kind);
+    }
+
+    public static void RecordFailure(
+        Activity? activity,
+        Exception exception)
+    {
+        if (activity is null)
+        {
+            return;
+        }
+
+        activity.SetStatus(ActivityStatusCode.Error);
+        activity.SetTag(
+            "exception.type",
+            exception.GetType().FullName
+                ?? exception.GetType().Name);
+    }
+
+
+    public static Activity? StartDatabaseActivity() =>
+        DatabaseSource.StartActivity(
+            "postgresql.command",
+            ActivityKind.Client);
+
+    
 
     public static IHostApplicationBuilder
         AddServicePilotObservability(
@@ -105,6 +146,7 @@ public static class ServicePilotTelemetry
                     new ParentBasedSampler(
                         new AlwaysOnSampler()));
                 tracing.AddSource(ActivitySourceName);
+                tracing.AddSource(DatabaseActivitySourceName);
                 tracing.AddHttpClientInstrumentation();
                 configureTracing?.Invoke(tracing);
                 tracing.AddProcessor(

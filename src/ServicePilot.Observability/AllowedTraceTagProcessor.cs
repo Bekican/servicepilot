@@ -16,6 +16,7 @@ internal sealed class AllowedTraceTagProcessor
             "http.response.status_code",
             "db.system.name",
             "db.operation.name",
+            "db.response.status_code",
             "exception.type",
             "problem.code",
             "servicepilot.correlation_id",
@@ -27,6 +28,8 @@ internal sealed class AllowedTraceTagProcessor
 
     public override void OnEnd(Activity activity)
     {
+        activity.SetStatus(activity.Status);
+
         foreach (KeyValuePair<string, object?> tag
                  in activity.TagObjects.ToArray())
         {

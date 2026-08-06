@@ -52,17 +52,7 @@ public sealed class ServicePilotApiFactory
             services.AddControllers().AddApplicationPart(
                 typeof(TestingFailureController).Assembly);
 
-            services.RemoveAll<
-                DbContextOptions<ServicePilotDbContext>>();
-
-            services.RemoveAll<ServicePilotDbContext>();
             services.RemoveAll<IEmailSender>();
-
-            services.AddDbContext<ServicePilotDbContext>(
-                options =>
-                    options.UseNpgsql(
-                        _postgresContainer.GetConnectionString()));
-
             services.AddSingleton<FakeEmailSender>();
             services.AddSingleton<IEmailSender>(
                 serviceProvider =>
