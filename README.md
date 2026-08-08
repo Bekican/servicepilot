@@ -143,9 +143,12 @@ publishes public ports; the database and application services remain private.
 Provisioning requirements, first-release sequencing and recovery commands are
 documented in
 [`docs/operations/staging-vps-and-offsite-backups.md`](docs/operations/staging-vps-and-offsite-backups.md).
-Real domains, registry digests, database secrets, Restic credentials and
-S3-compatible endpoints belong in `/etc/servicepilot/staging.env`, never in
-source control.
+Real domains, registry digests and runtime secrets belong in
+`/etc/servicepilot/staging.env`, never in source control. Disposable staging
+can start with private Mailpit while off-site backup and hosted telemetry are
+disabled. The environment validator refuses that configuration for
+production, where external TLS SMTP, encrypted S3-compatible Restic backups
+and hosted observability are mandatory.
 
 Run the free local S3-compatible backup and restore rehearsal with Docker
 Desktop and MinIO:

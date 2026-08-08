@@ -1,9 +1,21 @@
-name: servicepilot-staging
+name: ${COMPOSE_PROJECT_NAME}
+
+x-runtime-defaults: &runtime-defaults
+  restart: unless-stopped
+  init: true
+  stop_grace_period: 30s
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "5"
 
 services:
   postgres:
-    image: postgres:17-alpine
-    restart: unless-stopped
+    <<: *runtime-defaults
+    image: ${POSTGRES_IMAGE}
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -16,129 +28,156 @@ services:
       timeout: 5s
       retries: 12
       start_period: 15s
+    mem_limit: 1g
+    cpus: 1.5
     networks:
       - backend
-      - operations
 
   mailpit:
-    image: axllent/mailpit:v1.27
-    restart: unless-stopped
+    <<: *runtime-defaults
+    image: ${MAILPIT_IMAGE}
+    profiles: ["mailpit"]
+    ports:
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    mem_limit: 256m
+    cpus: 0.5
     networks:
       - backend
-
-  otel-collector:
-    image: otel/opentelemetry-collector:0.157.0
-    restart: unless-stopped
-    command:
-      - --config=/etc/otelcol/config.yaml
-    environment:
-      OTEL_BACKEND_ENDPOINT: ${OTEL_BACKEND_ENDPOINT}
-      OTEL_BACKEND_AUTHORIZATION: ${OTEL_BACKEND_AUTHORIZATION}
-    volumes:
-      - ./deploy/observability/otel-collector.staging.yaml:/etc/otelcol/config.yaml:ro
-    networks:
-      - backend
-      - operations
 
   migrator:
     image: ${SERVICEPILOT_MIGRATOR_IMAGE}
     profiles: ["operations"]
+    init: true
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
     depends_on:
       postgres:
         condition: service_healthy
-      otel-collector:
-        condition: service_started
     environment:
-      DOTNET_ENVIRONMENT: Staging
+      DOTNET_ENVIRONMENT: ${DOTNET_ENVIRONMENT_NAME}
       ConnectionStrings__Database: >-
         Host=postgres;Port=5432;Database=${POSTGRES_DB};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      Observability__OtlpEnabled: "true"
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      Observability__OtlpEnabled: "false"
     restart: "no"
+    mem_limit: 512m
+    cpus: 1.0
     networks:
       - backend
 
   api:
+    <<: *runtime-defaults
     image: ${SERVICEPILOT_API_IMAGE}
-    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
     depends_on:
       postgres:
         condition: service_healthy
-      mailpit:
-        condition: service_started
-      otel-collector:
-        condition: service_started
     environment:
-      ASPNETCORE_ENVIRONMENT: Staging
+      ASPNETCORE_ENVIRONMENT: ${DOTNET_ENVIRONMENT_NAME}
+      AllowedHosts: api;${PUBLIC_DOMAIN}
       ConnectionStrings__Database: >-
         Host=postgres;Port=5432;Database=${POSTGRES_DB};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       Jwt__SigningKey: ${JWT_SIGNING_KEY}
-      Smtp__Host: mailpit
-      Smtp__Port: 1025
-      Smtp__EnableSsl: "false"
+      Smtp__Host: ${SMTP_HOST}
+      Smtp__Port: ${SMTP_PORT}
+      Smtp__EnableSsl: ${SMTP_ENABLE_SSL}
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS}
       Smtp__FromName: ${SMTP_FROM_NAME}
-      Invitations__PublicBaseUrl: https://${STAGING_DOMAIN}/invitations/accept
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Invitations__PublicBaseUrl: https://${PUBLIC_DOMAIN}/invitations/accept
       Database__MigrateOnStartup: "false"
-      Observability__OtlpEnabled: "true"
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      Observability__OtlpEnabled: "false"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: 768m
+    cpus: 1.0
     networks:
       - backend
 
   worker:
+    <<: *runtime-defaults
     image: ${SERVICEPILOT_WORKER_IMAGE}
-    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
     depends_on:
       postgres:
         condition: service_healthy
-      mailpit:
-        condition: service_started
-      otel-collector:
-        condition: service_started
     environment:
-      DOTNET_ENVIRONMENT: Staging
+      DOTNET_ENVIRONMENT: ${DOTNET_ENVIRONMENT_NAME}
       ConnectionStrings__Database: >-
         Host=postgres;Port=5432;Database=${POSTGRES_DB};
         Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      Smtp__Host: mailpit
-      Smtp__Port: 1025
-      Smtp__EnableSsl: "false"
+      Smtp__Host: ${SMTP_HOST}
+      Smtp__Port: ${SMTP_PORT}
+      Smtp__EnableSsl: ${SMTP_ENABLE_SSL}
       Smtp__FromAddress: ${SMTP_FROM_ADDRESS}
       Smtp__FromName: ${SMTP_FROM_NAME}
-      Invitations__PublicBaseUrl: https://${STAGING_DOMAIN}/invitations/accept
-      Observability__OtlpEnabled: "true"
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Invitations__PublicBaseUrl: https://${PUBLIC_DOMAIN}/invitations/accept
+      Observability__OtlpEnabled: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "grep -aq 'ServicePilot.Worker.dll' /proc/1/cmdline"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    mem_limit: 512m
+    cpus: 0.75
     networks:
       - backend
 
   web:
+    <<: *runtime-defaults
     image: ${SERVICEPILOT_WEB_IMAGE}
-    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /app/.next/cache:size=64m,mode=0755,uid=1001,gid=1001
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
     environment:
       NODE_ENV: production
       SERVICEPILOT_API_URL: http://api:8080
+      SERVICEPILOT_OTLP_ENABLED: "false"
+      SERVICEPILOT_ENVIRONMENT: ${DEPLOYMENT_TIER}
+      SERVICEPILOT_VERSION: ${RELEASE_ID}
       HOSTNAME: 0.0.0.0
       PORT: 3000
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: 768m
+    cpus: 1.0
     networks:
       - edge
       - backend
 
   caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
+    <<: *runtime-defaults
+    image: ${CADDY_IMAGE}
     depends_on:
       web:
-        condition: service_started
+        condition: service_healthy
     environment:
-      STAGING_DOMAIN: ${STAGING_DOMAIN}
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
       ACME_EMAIL: ${ACME_EMAIL}
     ports:
       - "80:80"
@@ -148,37 +187,11 @@ services:
       - ./deploy/staging/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
+    mem_limit: 256m
+    cpus: 0.5
     networks:
       - edge
       - backend
-
-  backup:
-    image: ${SERVICEPILOT_BACKUP_IMAGE}
-    profiles: ["operations"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      PGHOST: postgres
-      PGPORT: 5432
-      PGDATABASE: ${POSTGRES_DB}
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      DEPLOYMENT_ENVIRONMENT: staging
-      RELEASE_ID: ${RELEASE_ID:-unknown}
-      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY}
-      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-auto}
-      RESTIC_AUTO_INIT: ${RESTIC_AUTO_INIT:-false}
-      RESTIC_KEEP_DAILY: ${RESTIC_KEEP_DAILY:-14}
-      RESTIC_KEEP_WEEKLY: ${RESTIC_KEEP_WEEKLY:-8}
-      RESTIC_APPLY_RETENTION: ${RESTIC_APPLY_RETENTION:-true}
-      BACKUP_HEARTBEAT_URL: ${BACKUP_HEARTBEAT_URL:-}
-    restart: "no"
-    networks:
-      - operations
 
 volumes:
   postgres-data:

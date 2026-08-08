@@ -1,0 +1,61 @@
+services:
+  otel-collector:
+    image: ${OTEL_COLLECTOR_IMAGE}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - --config=/etc/otelcol/config.yaml
+    environment:
+      OTEL_BACKEND_ENDPOINT: ${OTEL_BACKEND_ENDPOINT}
+      OTEL_BACKEND_AUTHORIZATION: ${OTEL_BACKEND_AUTHORIZATION}
+    volumes:
+      - ./deploy/observability/otel-collector.staging.yaml:/etc/otelcol/config.yaml:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+    mem_limit: 256m
+    cpus: 0.5
+    networks:
+      - backend
+      - operations
+
+  migrator:
+    depends_on:
+      otel-collector:
+        condition: service_started
+    environment:
+      Observability__OtlpEnabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+
+  api:
+    depends_on:
+      otel-collector:
+        condition: service_started
+    environment:
+      Observability__OtlpEnabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+
+  worker:
+    depends_on:
+      otel-collector:
+        condition: service_started
+    environment:
+      Observability__OtlpEnabled: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+
+  web:
+    depends_on:
+      otel-collector:
+        condition: service_started
+    environment:
+      SERVICEPILOT_OTLP_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf

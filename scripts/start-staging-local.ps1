@@ -58,6 +58,16 @@ try
             "Created .env.staging.local from the local-only template."
     }
 
+    $environmentContent = Get-Content -LiteralPath $environmentFile -Raw
+    if ($environmentContent -notmatch "(?m)^SERVICEPILOT_BACKUP_IMAGE=")
+    {
+        Add-Content `
+            -LiteralPath $environmentFile `
+            -Value "SERVICEPILOT_BACKUP_IMAGE=servicepilot-backup:local"
+        Write-Host `
+            "Added the backup image contract to the existing local environment."
+    }
+
     docker compose `
         --env-file $environmentFile `
         -f $composeFile `
@@ -81,6 +91,7 @@ try
 
     Wait-ForHttps "https://localhost:8443/login"
     Wait-ForHttps "https://localhost:8443/ops/api/ready"
+    Wait-ForHttps "https://localhost:8443/ops/web/ready"
     Wait-ForHttps "https://mailpit.localhost:8443"
 
     docker compose `
@@ -97,6 +108,7 @@ finally
 Write-Host "Local staging is ready."
 Write-Host "Web: https://localhost:8443"
 Write-Host "API readiness: https://localhost:8443/ops/api/ready"
+Write-Host "Web readiness: https://localhost:8443/ops/web/ready"
 Write-Host "Mailpit: https://mailpit.localhost:8443"
 Write-Host "HTTP redirect: http://localhost:8080"
 Write-Host `

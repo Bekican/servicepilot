@@ -127,9 +127,16 @@ services:
     depends_on:
       api:
         condition: service_started
+      otel-collector:
+        condition: service_started
     environment:
       NODE_ENV: production
       SERVICEPILOT_API_URL: http://api:8080
+      SERVICEPILOT_OTLP_ENABLED: "true"
+      SERVICEPILOT_ENVIRONMENT: staging-local
+      SERVICEPILOT_VERSION: local
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       HOSTNAME: 0.0.0.0
       PORT: 3000
     networks:

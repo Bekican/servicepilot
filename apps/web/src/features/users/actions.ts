@@ -26,7 +26,6 @@ export async function createInvitationAction(
     return { ...problemActionState(error), values: formValues(formData) };
   }
 
-  revalidatePath("/users");
   return {
     redirectTo: `/users?success=${encodeURIComponent("Davet e-postası gönderildi")}`,
   };

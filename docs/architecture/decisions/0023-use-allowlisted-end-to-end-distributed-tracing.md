@@ -101,10 +101,11 @@ Web will propagate both `traceparent` and `X-Correlation-ID`; API will keep
 returning the correlation ID and include both identifiers in safe Problem
 Details responses.
 
-Only syntactically valid W3C trace context will be accepted. Invalid context is
-ignored and a new trace is created. OpenTelemetry baggage will not be accepted
-or propagated in the initial implementation, because uncontrolled baggage can
-become a path for user data and unbounded cardinality.
+Browser-supplied `traceparent`, `tracestate` and `baggage` are not trusted. The
+Next.js boundary removes them and starts server-owned context. Web propagates
+that context only on marked ServicePilot API fetches. API accepts this private
+server-to-server context. Baggage is never extracted or propagated, because it
+can become a path for user data and unbounded cardinality.
 
 ### Stable Span Names
 
@@ -214,7 +215,7 @@ Automated and local-staging verification will prove that:
 - Database failure spans contain no activity events, exception messages or
   stack traces.
 - Worker cycles and Migrator executions start independent root traces.
-- Invalid `traceparent` input is ignored safely.
+- Browser-controlled trace context and baggage are ignored safely.
 - Health endpoints do not create routine request traces.
 - Correlation ID has the same value in the relevant log and trace.
 - Raw URLs, queries, SQL, secrets, PII, exception messages and stack traces do

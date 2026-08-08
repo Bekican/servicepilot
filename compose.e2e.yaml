@@ -93,6 +93,7 @@ services:
     environment:
       NODE_ENV: production
       SERVICEPILOT_API_URL: http://api:8080
+      SERVICEPILOT_OTLP_ENABLED: "false"
       HOSTNAME: 0.0.0.0
       PORT: 3000
     ports:

@@ -18,6 +18,21 @@ function apiBaseUrl() {
   );
 }
 
+function servicePilotApiFetch(request: Request) {
+  if (process.env.SERVICEPILOT_OTLP_ENABLED !== "true") {
+    return fetch(request);
+  }
+
+  return fetch(request, {
+    opentelemetry: {
+      propagateContext: true,
+      spanName: "servicepilot.api.request",
+      attributes: {
+        "servicepilot.trace_target": "servicepilot.api",
+      },
+    },
+  });
+}
 async function requestCorrelationId() {
   const requestHeaders = await headers();
   return resolveCorrelationId(requestHeaders.get(correlationIdHeader));
@@ -25,6 +40,7 @@ async function requestCorrelationId() {
 
 export async function createAnonymousApiClient() {
   return createClient<paths>({
+    fetch: servicePilotApiFetch,
     baseUrl: apiBaseUrl(),
     headers: {
       [correlationIdHeader]: await requestCorrelationId(),
@@ -38,6 +54,7 @@ export async function createServerApiClient() {
   const correlationId = await requestCorrelationId();
 
   return createClient<paths>({
+    fetch: servicePilotApiFetch,
     baseUrl: apiBaseUrl(),
     headers: {
       [correlationIdHeader]: correlationId,

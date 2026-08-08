@@ -5,12 +5,14 @@ import {
   correlationIdHeader,
   resolveCorrelationId,
 } from "@/lib/observability/correlation-id";
+import { removeUntrustedTracingHeaders } from "@/lib/observability/trace-headers";
 
 export function proxy(request: NextRequest) {
   const correlationId = resolveCorrelationId(
     request.headers.get(correlationIdHeader),
   );
   const requestHeaders = new Headers(request.headers);
+  removeUntrustedTracingHeaders(requestHeaders);
   requestHeaders.set(correlationIdHeader, correlationId);
 
   const response = NextResponse.next({

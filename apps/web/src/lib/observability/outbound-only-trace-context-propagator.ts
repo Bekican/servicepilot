@@ -13,7 +13,9 @@ export class OutboundOnlyTraceContextPropagator implements TextMapPropagator {
   inject(context: Context, carrier: unknown, setter: TextMapSetter) {
     this.traceContext.inject(context, carrier, setter);
   }
-  extract(context: Context, _carrier: unknown, _getter: TextMapGetter) {
+  extract(context: Context, carrier: unknown, getter: TextMapGetter) {
+    void carrier;
+    void getter;
     return context;
   }
 

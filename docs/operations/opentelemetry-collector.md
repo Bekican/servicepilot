@@ -31,9 +31,12 @@ docker compose --env-file .env.staging.local `
 
 ## Real Staging
 
-Set these values only in the restricted staging environment file:
+Set the feature gate and these values only in the restricted runtime
+environment file:
 
 ```dotenv
+OBSERVABILITY_ENABLED=true
+OTEL_COLLECTOR_IMAGE=otel/opentelemetry-collector:0.157.0@sha256:<real-digest>
 OTEL_BACKEND_ENDPOINT=https://provider-otlp-endpoint.example
 OTEL_BACKEND_AUTHORIZATION=Bearer replace-with-provider-token
 ```
@@ -46,4 +49,5 @@ work.
 
 Before enabling a real provider, confirm its OTLP/HTTP base endpoint and exact
 `Authorization` header format. Never place that token in API, Worker or
-Migrator environment variables.
+Migrator environment variables. When the gate is false, the Collector overlay
+is not loaded and all application OTLP exporters remain disabled.

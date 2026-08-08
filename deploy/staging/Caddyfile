@@ -2,7 +2,7 @@
 	email {$ACME_EMAIL}
 }
 
-{$STAGING_DOMAIN} {
+{$PUBLIC_DOMAIN} {
 	encode zstd gzip
 
 	header {
@@ -17,6 +17,11 @@
 	handle /ops/api/ready {
 		rewrite * /health/ready
 		reverse_proxy api:8080
+	}
+
+	handle /ops/web/ready {
+		rewrite * /api/health
+		reverse_proxy web:3000
 	}
 
 	handle {

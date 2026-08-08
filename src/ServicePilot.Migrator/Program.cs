@@ -19,7 +19,10 @@ builder.Services.AddMigrationInfrastructure(
     builder.Configuration);
 
 using IHost host = builder.Build();
-_ = host.Services.GetRequiredService<TracerProvider>();
+// Creating the provider before the root activity ensures the first migration
+// span has a listener when OTLP is enabled. Telemetry is an optional,
+// fail-open dependency, so a disabled exporter must not block migrations.
+_ = host.Services.GetService<TracerProvider>();
 await using AsyncServiceScope scope =
     host.Services.CreateAsyncScope();
 

@@ -53,13 +53,18 @@ jobs:
           sh -n deploy/staging/operations/backup.sh
           sh -n deploy/staging/operations/restore-drill.sh
           sh -n scripts/validate-staging-environment.sh
+          sh -n scripts/staging-compose.sh
+          sh -n scripts/test-staging-validation.sh
           sh -n scripts/deploy-staging.sh
           sh -n scripts/backup-staging.sh
           sh -n scripts/restore-drill-staging.sh
           sh -n scripts/initialize-restic-staging.sh
           sh -n scripts/rollback-staging.sh
-          docker compose --env-file deploy/staging/.env.example -f compose.staging.yaml config --quiet
+          docker compose --env-file deploy/staging/.env.example --env-file deploy/staging/release.env.example -f compose.staging.yaml config --quiet
+          docker compose --env-file deploy/staging/.env.example --env-file deploy/staging/release.env.example -f compose.staging.yaml -f compose.staging.observability.yaml config --quiet
+          docker compose --env-file deploy/staging/.env.example --env-file deploy/staging/release.env.example -f compose.staging.yaml -f compose.staging.backup.yaml --profile operations config --quiet
           docker compose --env-file deploy/staging/.env.local.example --env-file deploy/staging/.env.minio.local.example -f compose.staging.local.yaml -f compose.staging.minio.yaml config --quiet
+          sh scripts/test-staging-validation.sh
           docker build --file Dockerfile.backup --tag servicepilot-backup:quality .
 
       - name: Run the complete quality gate

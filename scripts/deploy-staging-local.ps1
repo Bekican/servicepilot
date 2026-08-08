@@ -40,9 +40,16 @@ function Wait-ForHttps([string]$Uri, [int]$TimeoutSeconds = 120) {
     throw "Timed out waiting for $Uri."
 }
 
-function Get-EnvironmentValue([string]$Content, [string]$Name) {
+function Get-EnvironmentValue(
+    [string]$Content,
+    [string]$Name,
+    [string]$DefaultValue = ""
+) {
     $match = [regex]::Match($Content, "(?m)^$([regex]::Escape($Name))=(.*)$")
     if (-not $match.Success) {
+        if (-not [string]::IsNullOrWhiteSpace($DefaultValue)) {
+            return $DefaultValue
+        }
         throw "Missing $Name in .env.staging.local."
     }
     return $match.Groups[1].Value.Trim()
@@ -51,7 +58,7 @@ function Get-EnvironmentValue([string]$Content, [string]$Name) {
 function Set-EnvironmentValue([string]$Content, [string]$Name, [string]$Value) {
     $pattern = "(?m)^$([regex]::Escape($Name))=.*$"
     if (-not [regex]::IsMatch($Content, $pattern)) {
-        throw "Missing $Name in .env.staging.local."
+        return $Content.TrimEnd() + [Environment]::NewLine + "$Name=$Value" + [Environment]::NewLine
     }
     return [regex]::Replace($Content, $pattern, "$Name=$Value")
 }
@@ -64,6 +71,10 @@ function New-ManifestFromEnvironment([string]$Content, [string]$ReleaseId) {
             web = Get-EnvironmentValue $Content "SERVICEPILOT_WEB_IMAGE"
             worker = Get-EnvironmentValue $Content "SERVICEPILOT_WORKER_IMAGE"
             migrator = Get-EnvironmentValue $Content "SERVICEPILOT_MIGRATOR_IMAGE"
+            backup = Get-EnvironmentValue `
+                $Content `
+                "SERVICEPILOT_BACKUP_IMAGE" `
+                "servicepilot-backup:local"
         }
     }
 }
@@ -89,6 +100,7 @@ $imageMap = [ordered]@{
     SERVICEPILOT_WEB_IMAGE = [string]$manifest.images.web
     SERVICEPILOT_WORKER_IMAGE = [string]$manifest.images.worker
     SERVICEPILOT_MIGRATOR_IMAGE = [string]$manifest.images.migrator
+    SERVICEPILOT_BACKUP_IMAGE = [string]$manifest.images.backup
 }
 
 foreach ($entry in $imageMap.GetEnumerator()) {
@@ -146,6 +158,7 @@ try {
 
     Wait-ForHttps "https://localhost:8443/login"
     Wait-ForHttps "https://localhost:8443/ops/api/ready"
+    Wait-ForHttps "https://localhost:8443/ops/web/ready"
 
     $manifest | ConvertTo-Json -Depth 4 | Set-Content -Path $currentReleasePath -Encoding utf8
     Write-Host "Release $($manifest.releaseId) is ready. Previous application images remain available for rollback."
@@ -159,6 +172,7 @@ catch {
         try {
             Wait-ForHttps "https://localhost:8443/login"
             Wait-ForHttps "https://localhost:8443/ops/api/ready"
+            Wait-ForHttps "https://localhost:8443/ops/web/ready"
         }
         catch {
             Write-Warning "Automatic application rollback also failed readiness; manual intervention is required."
