@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import { ArrowRight, LoaderCircle } from "lucide-react";
@@ -15,6 +15,7 @@ import {
   registerAction,
   type AuthActionState,
 } from "@/lib/auth/actions";
+import { organizationSlugFromName } from "@/lib/auth/organization-slug";
 
 type AuthMode = "login" | "register" | "invitation";
 
@@ -52,6 +53,9 @@ export function AuthForm({
     action,
     {},
   );
+  const [organizationName, setOrganizationName] = useState("");
+  const [organizationSlug, setOrganizationSlug] = useState("");
+  const [organizationSlugEdited, setOrganizationSlugEdited] = useState(false);
   const timeZoneInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -71,13 +75,32 @@ export function AuthForm({
             autoComplete="organization"
             label="Organizasyon adı"
             name="organizationName"
+            onChange={(event) => {
+              const name = event.target.value;
+              setOrganizationName(name);
+              if (!organizationSlugEdited) {
+                setOrganizationSlug(organizationSlugFromName(name));
+              }
+            }}
             placeholder="Örn. Atlas Teknik"
+            value={organizationName}
           />
           <Field
             autoCapitalize="none"
-            label="Organizasyon adresi"
+            autoComplete="off"
+            description="Giriş yaparken kullanacağınız kısa ad. Küçük harf, rakam ve isteğe bağlı tire kullanabilirsiniz."
+            label="Organizasyon kısa adı"
+            maxLength={100}
+            minLength={2}
             name="organizationSlug"
+            onChange={(event) => {
+              setOrganizationSlug(event.target.value.toLowerCase());
+              setOrganizationSlugEdited(true);
+            }}
+            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
             placeholder="atlas-teknik"
+            title="Küçük harf, rakam ve isteğe bağlı tire kullanın."
+            value={organizationSlug}
           />
         </>
       ) : null}
@@ -168,17 +191,33 @@ export function AuthForm({
 }
 
 function Field({
+  description,
   label,
   name,
   ...props
 }: React.ComponentProps<typeof Input> & {
+  description?: string;
   label: string;
   name: string;
 }) {
+  const descriptionId = description ? `${name}-description` : undefined;
+
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>{label}</Label>
-      <Input className="h-11" id={name} name={name} required {...props} />
+      <Input
+        aria-describedby={descriptionId}
+        className="h-11"
+        id={name}
+        name={name}
+        required
+        {...props}
+      />
+      {description ? (
+        <p className="text-muted-foreground text-xs" id={descriptionId}>
+          {description}
+        </p>
+      ) : null}
     </div>
   );
 }
