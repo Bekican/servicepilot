@@ -60,6 +60,7 @@ services:
       Smtp__FromName: ServicePilot E2E
       Invitations__PublicBaseUrl: >-
         http://127.0.0.1:13000/invitations/accept
+      PasswordReset__PublicBaseUrl: http://127.0.0.1:13000/
       Database__MigrateOnStartup: "false"
     ports:
       - "15267:8080"

@@ -77,7 +77,9 @@ public static class ApiErrorCatalog
             descriptors,
             StatusCodes.Status409Conflict,
             CustomerErrors.EmailAlreadyExists,
+            CustomerErrors.EmailBelongsToInactiveCustomer,
             CustomerErrors.PhoneAlreadyExists,
+            CustomerErrors.PhoneBelongsToInactiveCustomer,
             CustomerErrors.PrimaryAddressConflict);
         Add(
             descriptors,
@@ -105,7 +107,8 @@ public static class ApiErrorCatalog
         Add(
             descriptors,
             StatusCodes.Status409Conflict,
-            ServiceCatalogErrors.NameAlreadyExists);
+            ServiceCatalogErrors.NameAlreadyExists,
+            ServiceCatalogErrors.NameBelongsToInactiveService);
         Add(
             descriptors,
             StatusCodes.Status400BadRequest,

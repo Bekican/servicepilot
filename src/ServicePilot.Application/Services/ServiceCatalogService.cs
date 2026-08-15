@@ -30,7 +30,13 @@ public sealed class ServiceCatalogService(
             cancellationToken))
         {
             return Result<ServiceCatalogResponse>.Failure(
-                ServiceCatalogErrors.NameAlreadyExists);
+                await repository.NameBelongsToInactiveServiceAsync(
+                    tenantContext.OrganizationId,
+                    normalizedName,
+                    null,
+                    cancellationToken)
+                    ? ServiceCatalogErrors.NameBelongsToInactiveService
+                    : ServiceCatalogErrors.NameAlreadyExists);
         }
 
         ServiceCatalogItem service;
@@ -123,7 +129,13 @@ public sealed class ServiceCatalogService(
             cancellationToken))
         {
             return Result<ServiceCatalogResponse>.Failure(
-                ServiceCatalogErrors.NameAlreadyExists);
+                await repository.NameBelongsToInactiveServiceAsync(
+                    tenantContext.OrganizationId,
+                    normalizedName,
+                    serviceId,
+                    cancellationToken)
+                    ? ServiceCatalogErrors.NameBelongsToInactiveService
+                    : ServiceCatalogErrors.NameAlreadyExists);
         }
 
         try
@@ -165,6 +177,17 @@ public sealed class ServiceCatalogService(
         {
             return Result<ServiceCatalogResponse>.Failure(
                 ServiceCatalogErrors.NotFound);
+        }
+
+        if (isActive && !service.IsActive
+            && await repository.NameExistsAsync(
+                tenantContext.OrganizationId,
+                service.NormalizedName,
+                service.Id,
+                cancellationToken))
+        {
+            return Result<ServiceCatalogResponse>.Failure(
+                ServiceCatalogErrors.NameAlreadyExists);
         }
 
         service.SetActive(

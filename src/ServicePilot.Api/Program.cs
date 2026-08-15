@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -84,6 +85,24 @@ builder.Services
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddSingleton<ApiProblemDetailsFactory>();
+builder.Services.AddSingleton<PasswordResetRequestLimiter>();
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    foreach (IConfigurationSection networkSection in builder.Configuration
+        .GetSection("ForwardedHeaders:KnownNetworks")
+        .GetChildren())
+    {
+        if (System.Net.IPNetwork.TryParse(
+            networkSection.Value,
+            out System.Net.IPNetwork network))
+        {
+            options.KnownIPNetworks.Add(network);
+        }
+    }
+});
 builder.Services.AddExceptionHandler<
     GlobalExceptionHandler>();
 builder.Services
@@ -262,6 +281,8 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 WebApplication app = builder.Build();
+
+app.UseForwardedHeaders();
 
 if (builder.Configuration.GetValue<bool>(
     "Database:MigrateOnStartup"))

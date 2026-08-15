@@ -20,5 +20,11 @@ public interface IServiceCatalogRepository
         Guid? excludedServiceId,
         CancellationToken cancellationToken = default);
 
+    Task<bool> NameBelongsToInactiveServiceAsync(
+        Guid organizationId,
+        string normalizedName,
+        Guid? excludedServiceId,
+        CancellationToken cancellationToken = default);
+
     void Add(ServiceCatalogItem service);
 }

@@ -18,7 +18,9 @@ internal sealed class PasswordResetTokenConfiguration
         builder.Property(token => token.TokenHash).HasColumnName("token_hash").HasMaxLength(64).IsRequired();
         builder.Property(token => token.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
         builder.Property(token => token.ExpiresAtUtc).HasColumnName("expires_at_utc").IsRequired();
-        builder.Property(token => token.UsedAtUtc).HasColumnName("used_at_utc");
+        builder.Property(token => token.UsedAtUtc)
+            .HasColumnName("used_at_utc")
+            .IsConcurrencyToken();
         builder.Property(token => token.RevokedAtUtc).HasColumnName("revoked_at_utc");
         builder.HasIndex(token => token.TokenHash).IsUnique().HasDatabaseName("ux_password_reset_tokens_hash");
         builder.HasIndex(token => new { token.OrganizationId, token.UserId });

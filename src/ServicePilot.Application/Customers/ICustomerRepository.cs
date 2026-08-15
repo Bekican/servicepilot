@@ -28,7 +28,19 @@ public interface ICustomerRepository
         Guid? excludedCustomerId,
         CancellationToken cancellationToken = default);
 
+    Task<bool> EmailBelongsToInactiveCustomerAsync(
+        Guid organizationId,
+        string normalizedEmail,
+        Guid? excludedCustomerId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> PhoneExistsAsync(
+        Guid organizationId,
+        string normalizedPhone,
+        Guid? excludedCustomerId,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> PhoneBelongsToInactiveCustomerAsync(
         Guid organizationId,
         string normalizedPhone,
         Guid? excludedCustomerId,
@@ -49,6 +61,14 @@ public interface ICustomerRepository
         Guid organizationId,
         Guid customerId,
         Guid addressId,
+        DateTimeOffset updatedAtUtc,
+        CancellationToken cancellationToken = default);
+
+    Task DeactivateAddressAndPromoteAsync(
+        Guid organizationId,
+        Guid customerId,
+        Guid addressId,
+        Guid? replacementAddressId,
         DateTimeOffset updatedAtUtc,
         CancellationToken cancellationToken = default);
 

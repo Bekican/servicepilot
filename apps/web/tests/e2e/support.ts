@@ -42,7 +42,7 @@ export async function registerThroughUi(
 ) {
   await page.goto("/register");
   await page.getByLabel("Organizasyon adı").fill(organization.name);
-  await page.getByLabel("Organizasyon adresi").fill(organization.slug);
+  await page.getByLabel("Organizasyon kısa adı").fill(organization.slug);
   await page
     .getByLabel("Ad", { exact: true })
     .fill(organization.ownerFirstName);

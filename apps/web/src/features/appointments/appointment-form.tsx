@@ -59,18 +59,25 @@ export function AppointmentForm({
   const customer = customers.find((item) => item.id === customerId);
   const service = services.find((item) => item.id === serviceId);
   const duration = Number(service?.defaultDurationMinutes ?? 60);
-  const instants = useMemo(() => {
-    if (!startLocal) return null;
+  const conversion = useMemo(() => {
+    if (!startLocal) return { instants: null, error: undefined };
     try {
       const startAt = zonedLocalDateTimeToIso(startLocal, timeZone);
       const endAt = new Date(
         new Date(startAt).getTime() + duration * 60_000,
       ).toISOString();
-      return { startAt, endAt };
-    } catch {
-      return null;
+      return { instants: { startAt, endAt }, error: undefined };
+    } catch (error) {
+      return {
+        instants: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Geçerli bir tarih ve saat seçin.",
+      };
     }
   }, [duration, startLocal, timeZone]);
+  const { instants } = conversion;
 
   return (
     <form
@@ -137,7 +144,11 @@ export function AppointmentForm({
         />
         <FieldError
           id="startAt-error"
-          message={state.fieldErrors?.startAt ?? state.fieldErrors?.endAt}
+          message={
+            state.fieldErrors?.startAt ??
+            state.fieldErrors?.endAt ??
+            conversion.error
+          }
         />
         <p className="text-muted-foreground text-xs">
           Saat dilimi: {timeZone}. Bitiş, hizmet süresine göre otomatik

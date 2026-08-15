@@ -38,9 +38,15 @@ public static class CustomerErrors
     public static readonly Error EmailAlreadyExists = new(
         "Customer.EmailAlreadyExists",
         "A customer with this email already exists");
+    public static readonly Error EmailBelongsToInactiveCustomer = new(
+        "Customer.EmailBelongsToInactiveCustomer",
+        "This email belongs to an inactive customer");
     public static readonly Error PhoneAlreadyExists = new(
         "Customer.PhoneAlreadyExists",
         "A customer with this phone already exists");
+    public static readonly Error PhoneBelongsToInactiveCustomer = new(
+        "Customer.PhoneBelongsToInactiveCustomer",
+        "This phone belongs to an inactive customer");
     public static readonly Error PrimaryAddressConflict = new(
         "Customer.PrimaryAddressConflict",
         "Another address became primary first");

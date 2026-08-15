@@ -58,6 +58,9 @@ public sealed class SecurityHardeningTests(
                         "Jwt:SigningKey",
                         "servicepilot-rate-limit-test-signing-key");
                     builder.UseSetting(
+                        "PasswordReset:PublicBaseUrl",
+                        "https://servicepilot.test/");
+                    builder.UseSetting(
                         "RateLimiting:"
                         + "AuthenticationPermitLimit",
                         "2");
@@ -101,6 +104,40 @@ public sealed class SecurityHardeningTests(
         Assert.True(
             third.Headers.RetryAfter?.Delta
                 > TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task PasswordReset_ShouldHaveASeparateAccountPartitionedRateLimit()
+    {
+        await using WebApplicationFactory<Program> limitedFactory =
+            new WebApplicationFactory<Program>()
+                .WithWebHostBuilder(builder =>
+                {
+                    builder.UseEnvironment("Testing");
+                    builder.UseSetting("ConnectionStrings:Database", factory.ConnectionString);
+                    builder.UseSetting("Jwt:SigningKey", "servicepilot-reset-limit-test-signing-key");
+                    builder.UseSetting("PasswordReset:PublicBaseUrl", "https://servicepilot.test/");
+                    builder.UseSetting("RateLimiting:AuthenticationPermitLimit", "100");
+                    builder.UseSetting("RateLimiting:PasswordResetPermitLimit", "2");
+                });
+        using HttpClient client = limitedFactory.CreateClient();
+        PasswordResetRequest request = new("missing-org", "victim@example.com");
+
+        HttpResponseMessage first = await client.PostAsJsonAsync(
+            "/api/auth/password-reset/request", request);
+        HttpResponseMessage second = await client.PostAsJsonAsync(
+            "/api/auth/password-reset/request", request);
+        HttpResponseMessage third = await client.PostAsJsonAsync(
+            "/api/auth/password-reset/request", request);
+        HttpResponseMessage otherAccount = await client.PostAsJsonAsync(
+            "/api/auth/password-reset/request",
+            request with { Email = "other@example.com" });
+
+        Assert.Equal(HttpStatusCode.Accepted, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, second.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, otherAccount.StatusCode);
+        Assert.True(third.Headers.RetryAfter?.Delta > TimeSpan.Zero);
     }
 
     [Fact]

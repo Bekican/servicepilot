@@ -56,6 +56,7 @@ public static class DependencyInjection
             ReminderRepository>();
         services.AddScoped<IRetentionService,
             RetentionService>();
+        services.AddScoped<IEmailOutbox, EmailOutboxRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
@@ -100,6 +101,7 @@ public static class DependencyInjection
             DashboardRepository>();
         services.AddScoped<IRetentionService,
             RetentionService>();
+        services.AddScoped<IEmailOutbox, EmailOutboxRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
@@ -124,6 +126,8 @@ public static class DependencyInjection
                     configuration));
         services.AddSingleton<IInvitationLinkBuilder,
             InvitationLinkBuilder>();
+        services.AddSingleton(
+            _ => PasswordResetLinkOptions.FromConfiguration(configuration));
         services.AddSingleton<IPasswordResetLinkBuilder,
             PasswordResetLinkBuilder>();
         return services;

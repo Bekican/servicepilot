@@ -59,7 +59,7 @@ public sealed class ReminderManagementService(
                 currentUser.OrganizationId,
                 technicianFilter,
                 statusFilter,
-                (page - 1) * pageSize,
+                PageResult<ReminderResponse>.CalculateSkip(page, pageSize),
                 pageSize,
                 cancellationToken);
         return new PageResult<ReminderResponse>(

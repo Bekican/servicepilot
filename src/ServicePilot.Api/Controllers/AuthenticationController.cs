@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using System.Globalization;
+using System.Threading.RateLimiting;
 
+using ServicePilot.Api.Authentication;
 using ServicePilot.Api.Errors;
 using ServicePilot.Application.Authentication;
 using ServicePilot.Application.Authentication.AcceptInvitation;
@@ -22,6 +25,7 @@ public sealed class AuthenticationController(
     LoginHandler loginHandler,
     AcceptInvitationHandler acceptInvitationHandler,
     PasswordResetService passwordResetService,
+    PasswordResetRequestLimiter passwordResetRequestLimiter,
     CurrentSessionService currentSessionService,
     ApiProblemDetailsFactory problemFactory)
     : ServicePilotControllerBase(problemFactory)
@@ -136,11 +140,31 @@ public sealed class AuthenticationController(
     }
 
     [AllowAnonymous]
+    [DisableRateLimiting]
     [HttpPost("password-reset/request")]
     public async Task<IActionResult> RequestPasswordReset(
         PasswordResetRequest request,
         CancellationToken cancellationToken)
     {
+        using RateLimitLease lease = await passwordResetRequestLimiter.AcquireAsync(
+            request.OrganizationSlug,
+            request.Email,
+            cancellationToken);
+        if (!lease.IsAcquired)
+        {
+            if (lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
+            {
+                Response.Headers.RetryAfter = Math.Max(
+                    1,
+                    (int)Math.Ceiling(retryAfter.TotalSeconds))
+                    .ToString(CultureInfo.InvariantCulture);
+            }
+            return ToProblem(
+                ApiProblemCodes.RateLimitExceeded,
+                StatusCodes.Status429TooManyRequests,
+                "Too many password reset requests. Try again later.");
+        }
+
         await passwordResetService.RequestAsync(
             request.OrganizationSlug,
             request.Email,

@@ -85,6 +85,7 @@ internal sealed class ReminderRepository(
         int totalCount = await query.CountAsync(cancellationToken);
         Reminder[] items = await query
             .OrderByDescending(reminder => reminder.UpdatedAtUtc)
+            .ThenBy(reminder => reminder.Id)
             .Skip(skip)
             .Take(take)
             .ToArrayAsync(cancellationToken);

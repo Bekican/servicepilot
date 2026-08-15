@@ -56,16 +56,22 @@ internal sealed class CustomerRepository(
 
         if (normalizedSearch.Length > 0)
         {
+            string escapedSearch = normalizedSearch
+                .Replace("\\", "\\\\", StringComparison.Ordinal)
+                .Replace("%", "\\%", StringComparison.Ordinal)
+                .Replace("_", "\\_", StringComparison.Ordinal);
+            string pattern = $"%{escapedSearch}%";
+            string numberPattern = $"%{escapedSearch.Replace("cus-", string.Empty, StringComparison.Ordinal)}%";
             query = query.Where(customer =>
-                customer.Number.ToString().Contains(normalizedSearch.Replace("cus-", ""))
+                EF.Functions.Like(customer.Number.ToString(), numberPattern, "\\")
                 || (customer.FirstName != null
-                    && customer.FirstName.ToLower().Contains(normalizedSearch))
+                    && EF.Functions.Like(customer.FirstName.ToLower(), pattern, "\\"))
                 || (customer.LastName != null
-                    && customer.LastName.ToLower().Contains(normalizedSearch))
+                    && EF.Functions.Like(customer.LastName.ToLower(), pattern, "\\"))
                 || (customer.CompanyName != null
-                    && customer.CompanyName.ToLower().Contains(normalizedSearch))
+                    && EF.Functions.Like(customer.CompanyName.ToLower(), pattern, "\\"))
                 || (customer.NormalizedEmail != null
-                    && customer.NormalizedEmail.Contains(normalizedSearch)));
+                    && EF.Functions.Like(customer.NormalizedEmail, pattern, "\\")));
         }
 
         int totalCount = await query.CountAsync(cancellationToken);
@@ -109,6 +115,36 @@ internal sealed class CustomerRepository(
                     excludedCustomerId == null
                     || customer.Id != excludedCustomerId
                 ),
+            cancellationToken);
+    }
+
+    public Task<bool> EmailBelongsToInactiveCustomerAsync(
+        Guid organizationId,
+        string normalizedEmail,
+        Guid? excludedCustomerId,
+        CancellationToken cancellationToken = default)
+    {
+        return dbContext.Customers.AnyAsync(
+            customer =>
+                customer.OrganizationId == organizationId
+                && customer.NormalizedEmail == normalizedEmail
+                && !customer.IsActive
+                && (excludedCustomerId == null || customer.Id != excludedCustomerId),
+            cancellationToken);
+    }
+
+    public Task<bool> PhoneBelongsToInactiveCustomerAsync(
+        Guid organizationId,
+        string normalizedPhone,
+        Guid? excludedCustomerId,
+        CancellationToken cancellationToken = default)
+    {
+        return dbContext.Customers.AnyAsync(
+            customer =>
+                customer.OrganizationId == organizationId
+                && customer.NormalizedPhone == normalizedPhone
+                && !customer.IsActive
+                && (excludedCustomerId == null || customer.Id != excludedCustomerId),
             cancellationToken);
     }
 
@@ -170,6 +206,57 @@ internal sealed class CustomerRepository(
                );
              """,
             cancellationToken);
+        await ReloadTrackedAddressesAsync(
+            organizationId,
+            customerId,
+            cancellationToken);
+    }
+
+    public async Task DeactivateAddressAndPromoteAsync(
+        Guid organizationId,
+        Guid customerId,
+        Guid addressId,
+        Guid? replacementAddressId,
+        DateTimeOffset updatedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             UPDATE customer_addresses
+             SET
+                 is_active = CASE WHEN id = {addressId} THEN FALSE ELSE is_active END,
+                 is_primary = CASE
+                     WHEN id = {addressId} THEN FALSE
+                     WHEN id = {replacementAddressId} THEN TRUE
+                     ELSE is_primary
+                 END,
+                 updated_at_utc = {updatedAtUtc}
+             WHERE organization_id = {organizationId}
+               AND customer_id = {customerId}
+               AND (id = {addressId} OR id = {replacementAddressId});
+             """,
+            cancellationToken);
+        await ReloadTrackedAddressesAsync(
+            organizationId,
+            customerId,
+            cancellationToken);
+    }
+
+    private async Task ReloadTrackedAddressesAsync(
+        Guid organizationId,
+        Guid customerId,
+        CancellationToken cancellationToken)
+    {
+        var entries = dbContext.ChangeTracker
+            .Entries<CustomerAddress>()
+            .Where(entry =>
+                entry.Entity.OrganizationId == organizationId
+                && entry.Entity.CustomerId == customerId)
+            .ToArray();
+        foreach (var entry in entries)
+        {
+            await entry.ReloadAsync(cancellationToken);
+        }
     }
 
     public void Add(Customer customer)

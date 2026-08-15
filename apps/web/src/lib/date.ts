@@ -98,5 +98,20 @@ export function zonedLocalDateTimeToIso(value: string, timeZone: string) {
     instant += desiredAsUtc - observedAsUtc;
   }
 
+  const observedParts = formatter.formatToParts(new Date(instant));
+  const observed = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(observedParts.find((item) => item.type === type)?.value);
+  if (
+    observed("year") !== desired.year ||
+    observed("month") !== desired.month ||
+    observed("day") !== desired.day ||
+    observed("hour") !== desired.hour ||
+    observed("minute") !== desired.minute
+  ) {
+    throw new Error(
+      "Bu yerel saat, saat dilimi geçişi nedeniyle mevcut değil.",
+    );
+  }
+
   return new Date(instant).toISOString();
 }

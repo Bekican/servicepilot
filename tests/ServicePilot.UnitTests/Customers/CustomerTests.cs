@@ -96,6 +96,24 @@ public sealed class CustomerTests
         Assert.Equal("+905551112233", customer.NormalizedPhone);
     }
 
+    [Theory]
+    [InlineData("+900555123456")]
+    [InlineData("+90555123456")]
+    [InlineData("+9055512345678")]
+    public void Create_ShouldRejectMalformedTurkeyPhone(string phone)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            Customer.CreateIndividual(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                1,
+                "Bekir",
+                "Çakmak",
+                null,
+                phone,
+                UtcNow));
+    }
+
     [Fact]
     public void AddressDeactivation_ShouldClearPrimaryFlag()
     {

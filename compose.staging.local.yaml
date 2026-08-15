@@ -83,6 +83,8 @@ services:
       Smtp__FromAddress: no-reply@servicepilot.staging.local
       Smtp__FromName: ServicePilot Staging
       Invitations__PublicBaseUrl: ${PUBLIC_BASE_URL}/invitations/accept
+      PasswordReset__PublicBaseUrl: ${PUBLIC_BASE_URL}/
+      ForwardedHeaders__KnownNetworks__0: 172.16.0.0/12
       Database__MigrateOnStartup: "false"
       Observability__OtlpEnabled: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317

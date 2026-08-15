@@ -7,6 +7,7 @@ using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Domain.Appointments;
 using ServicePilot.Domain.Auditing;
 using ServicePilot.Domain.Customers;
+using ServicePilot.Domain.Email;
 using ServicePilot.Domain.Employees;
 using ServicePilot.Domain.Organizations;
 using ServicePilot.Domain.Reminders;
@@ -27,6 +28,7 @@ public sealed class ServicePilotDbContext(
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerAddress> CustomerAddresses =>
         Set<CustomerAddress>();
+    public DbSet<EmailOutboxMessage> EmailOutbox => Set<EmailOutboxMessage>();
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<Reminder> Reminders => Set<Reminder>();
     public DbSet<ServiceCatalogItem> Services =>
@@ -47,6 +49,10 @@ public sealed class ServicePilotDbContext(
         try
         {
             return await base.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            throw new ConcurrencyViolationException(exception);
         }
         catch (DbUpdateException exception)
             when (exception.InnerException is PostgresException

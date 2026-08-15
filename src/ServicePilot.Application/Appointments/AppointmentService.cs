@@ -253,7 +253,7 @@ public sealed partial class AppointmentService(
                     filter.ToUtc?.ToUniversalTime(),
                     status,
                     technicianFilter),
-                (page - 1) * pageSize,
+                PageResult<AppointmentResponse>.CalculateSkip(page, pageSize),
                 pageSize,
                 cancellationToken);
         bool canManage = await CanManageAppointmentsAsync(cancellationToken);

@@ -181,7 +181,7 @@ public sealed partial class UserManagementTests
     }
 
     [Fact]
-    public async Task InactiveOwnerToken_ShouldNotManageUsers()
+    public async Task InactiveOwnerToken_ShouldBeRejectedAsUnauthorized()
     {
         RegisteredOwner firstOwner =
             await RegisterOwnerAsync();
@@ -205,12 +205,12 @@ public sealed partial class UserManagementTests
                 "/api/users",
                 secondOwner.AccessToken);
 
-        HttpResponseMessage forbiddenResponse =
+        HttpResponseMessage response =
             await _client.SendAsync(listRequest);
 
         Assert.Equal(
-            HttpStatusCode.Forbidden,
-            forbiddenResponse.StatusCode);
+            HttpStatusCode.Unauthorized,
+            response.StatusCode);
     }
 
     [Fact]

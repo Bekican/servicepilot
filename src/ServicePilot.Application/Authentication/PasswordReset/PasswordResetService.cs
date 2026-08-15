@@ -1,11 +1,13 @@
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
+using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Organizations.CreateOrganization;
 using ServicePilot.Application.Users;
 using ServicePilot.Domain.Users;
+using ServicePilot.Domain.Email;
 
 namespace ServicePilot.Application.Authentication.PasswordReset;
 
@@ -16,7 +18,7 @@ public sealed class PasswordResetService(
     IInvitationTokenService tokenService,
     IPasswordHasher passwordHasher,
     IPasswordResetLinkBuilder linkBuilder,
-    IEmailSender emailSender,
+    IEmailOutbox emailOutbox,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
 {
@@ -44,22 +46,15 @@ public sealed class PasswordResetService(
         tokenRepository.Add(new PasswordResetToken(
             Guid.NewGuid(), organization.Id, user.Id, generated.Hash,
             nowUtc, nowUtc.AddMinutes(30)));
+        emailOutbox.Add(new EmailOutboxMessage(
+            Guid.NewGuid(),
+            user.Email,
+            "ServicePilot parola sıfırlama",
+            "Parolanızı yenilemek için aşağıdaki tek kullanımlık bağlantıyı açın:"
+            + $"{Environment.NewLine}{linkBuilder.Build(generated.RawValue)}"
+            + $"{Environment.NewLine}{Environment.NewLine}Bağlantı 30 dakika geçerlidir.",
+            nowUtc));
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        try
-        {
-            await emailSender.SendAsync(new EmailMessage(
-                user.Email,
-                "ServicePilot parola sıfırlama",
-                "Parolanızı yenilemek için aşağıdaki tek kullanımlık bağlantıyı açın:"
-                + $"{Environment.NewLine}{linkBuilder.Build(generated.RawValue)}"
-                + $"{Environment.NewLine}{Environment.NewLine}Bağlantı 30 dakika geçerlidir."),
-                cancellationToken);
-        }
-        catch (EmailDeliveryException)
-        {
-            // The public response deliberately does not reveal account or delivery state.
-        }
     }
 
     public async Task<Result> CompleteAsync(
@@ -92,7 +87,26 @@ public sealed class PasswordResetService(
 
         user.ChangePassword(passwordHasher.Hash(password));
         token.Use(nowUtc);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        foreach (PasswordResetToken otherToken in
+            await tokenRepository.ListAvailableForUserAsync(
+                token.OrganizationId,
+                token.UserId,
+                cancellationToken))
+        {
+            if (otherToken.Id != token.Id)
+            {
+                otherToken.Revoke(nowUtc);
+            }
+        }
+
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (ConcurrencyViolationException)
+        {
+            return Result.Failure(PasswordResetErrors.InvalidOrExpired);
+        }
         return Result.Success();
     }
 }

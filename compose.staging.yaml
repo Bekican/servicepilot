@@ -93,6 +93,8 @@ services:
       Smtp__Username: ${SMTP_USERNAME:-}
       Smtp__Password: ${SMTP_PASSWORD:-}
       Invitations__PublicBaseUrl: https://${PUBLIC_DOMAIN}/invitations/accept
+      PasswordReset__PublicBaseUrl: https://${PUBLIC_DOMAIN}/
+      ForwardedHeaders__KnownNetworks__0: 172.16.0.0/12
       Database__MigrateOnStartup: "false"
       Observability__OtlpEnabled: "false"
     healthcheck:

@@ -142,6 +142,76 @@ public sealed class CustomerApiTests
     }
 
     [Fact]
+    public async Task DuplicateEmailOnInactiveCustomer_ShouldSuggestReactivation()
+    {
+        AuthenticationTokenResponse owner = await RegisterOwnerAsync();
+        string email = $"inactive-{Guid.NewGuid():N}@example.com";
+        HttpResponseMessage created = await SendAsync(
+            HttpMethod.Post,
+            "/api/customers",
+            owner.AccessToken,
+            IndividualRequest(email, null));
+        CustomerResponse customer = Assert.IsType<CustomerResponse>(
+            await created.Content.ReadFromJsonAsync<CustomerResponse>());
+        (await SendAsync<object>(
+            HttpMethod.Post,
+            $"/api/customers/{customer.Id}/deactivate",
+            owner.AccessToken,
+            null)).EnsureSuccessStatusCode();
+
+        HttpResponseMessage duplicate = await SendAsync(
+            HttpMethod.Post,
+            "/api/customers",
+            owner.AccessToken,
+            IndividualRequest(email, null));
+
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        Assert.Contains(
+            "Customer.EmailBelongsToInactiveCustomer",
+            await duplicate.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Search_ShouldTreatLikeWildcardsAsLiteralCharacters()
+    {
+        AuthenticationTokenResponse owner = await RegisterOwnerAsync();
+        (await SendAsync(
+            HttpMethod.Post,
+            "/api/customers",
+            owner.AccessToken,
+            IndividualRequest($"wildcard-{Guid.NewGuid():N}@example.com", null)))
+            .EnsureSuccessStatusCode();
+
+        HttpResponseMessage response = await SendAsync<object>(
+            HttpMethod.Get,
+            "/api/customers?search=%25",
+            owner.AccessToken,
+            null);
+        response.EnsureSuccessStatusCode();
+        PagedResponse<CustomerResponse> page = Assert.IsType<PagedResponse<CustomerResponse>>(
+            await response.Content.ReadFromJsonAsync<PagedResponse<CustomerResponse>>());
+
+        Assert.Empty(page.Items);
+    }
+
+    [Fact]
+    public async Task ExtremePageNumber_ShouldReturnAnEmptyPage()
+    {
+        AuthenticationTokenResponse owner = await RegisterOwnerAsync();
+
+        HttpResponseMessage response = await SendAsync<object>(
+            HttpMethod.Get,
+            "/api/customers?page=2000000000&pageSize=100",
+            owner.AccessToken,
+            null);
+        response.EnsureSuccessStatusCode();
+        PagedResponse<CustomerResponse> page = Assert.IsType<PagedResponse<CustomerResponse>>(
+            await response.Content.ReadFromJsonAsync<PagedResponse<CustomerResponse>>());
+
+        Assert.Empty(page.Items);
+    }
+
+    [Fact]
     public async Task CustomerId_ShouldNotLeakAcrossTenants()
     {
         AuthenticationTokenResponse firstOwner =
@@ -241,6 +311,68 @@ public sealed class CustomerApiTests
                 && address.IsPrimary);
     }
 
+    [Fact]
+    public async Task OnlyActiveAddress_ShouldRemainPrimaryWhenUnchecked()
+    {
+        AuthenticationTokenResponse owner = await RegisterOwnerAsync();
+        HttpResponseMessage created = await SendAsync(
+            HttpMethod.Post,
+            "/api/customers",
+            owner.AccessToken,
+            IndividualRequest($"only-address-{Guid.NewGuid():N}@example.com", null));
+        CustomerResponse customer = Assert.IsType<CustomerResponse>(
+            await created.Content.ReadFromJsonAsync<CustomerResponse>());
+        CustomerAddressResponse address = await AddAddressAsync(
+            owner.AccessToken,
+            customer.Id,
+            "Only",
+            true);
+
+        HttpResponseMessage updated = await SendAsync(
+            HttpMethod.Put,
+            $"/api/customers/{customer.Id}/addresses/{address.Id}",
+            owner.AccessToken,
+            AddressRequest("Only", false));
+        updated.EnsureSuccessStatusCode();
+        CustomerAddressResponse result = Assert.IsType<CustomerAddressResponse>(
+            await updated.Content.ReadFromJsonAsync<CustomerAddressResponse>());
+
+        Assert.True(result.IsPrimary);
+    }
+
+    [Fact]
+    public async Task DeactivatingPrimaryAddress_ShouldPromoteOldestActiveAddress()
+    {
+        AuthenticationTokenResponse owner = await RegisterOwnerAsync();
+        HttpResponseMessage created = await SendAsync(
+            HttpMethod.Post,
+            "/api/customers",
+            owner.AccessToken,
+            IndividualRequest($"promote-address-{Guid.NewGuid():N}@example.com", null));
+        CustomerResponse customer = Assert.IsType<CustomerResponse>(
+            await created.Content.ReadFromJsonAsync<CustomerResponse>());
+        CustomerAddressResponse primary = await AddAddressAsync(
+            owner.AccessToken, customer.Id, "Primary", true);
+        CustomerAddressResponse replacement = await AddAddressAsync(
+            owner.AccessToken, customer.Id, "Replacement", false);
+
+        (await SendAsync<object>(
+            HttpMethod.Post,
+            $"/api/customers/{customer.Id}/addresses/{primary.Id}/deactivate",
+            owner.AccessToken,
+            null)).EnsureSuccessStatusCode();
+        HttpResponseMessage getResponse = await SendAsync<object>(
+            HttpMethod.Get,
+            $"/api/customers/{customer.Id}",
+            owner.AccessToken,
+            null);
+        CustomerResponse result = Assert.IsType<CustomerResponse>(
+            await getResponse.Content.ReadFromJsonAsync<CustomerResponse>());
+
+        Assert.Contains(result.Addresses, item =>
+            item.Id == replacement.Id && item.IsActive && item.IsPrimary);
+    }
+
     private async Task<CustomerAddressResponse>
         AddAddressAsync(
             string accessToken,
@@ -253,15 +385,7 @@ public sealed class CustomerApiTests
                 HttpMethod.Post,
                 $"/api/customers/{customerId}/addresses",
                 accessToken,
-                new CustomerAddressUpsertRequest(
-                    label,
-                    $"{label} Street 1",
-                    null,
-                    "Istanbul",
-                    null,
-                    "34000",
-                    "TR",
-                    isPrimary));
+                AddressRequest(label, isPrimary));
         response.EnsureSuccessStatusCode();
 
         CustomerAddressResponse? address =
@@ -352,4 +476,16 @@ public sealed class CustomerApiTests
             email,
             phone);
     }
+
+    private static CustomerAddressUpsertRequest AddressRequest(
+        string label,
+        bool isPrimary) => new(
+            label,
+            $"{label} Street 1",
+            null,
+            "Istanbul",
+            null,
+            "34000",
+            "TR",
+            isPrimary);
 }

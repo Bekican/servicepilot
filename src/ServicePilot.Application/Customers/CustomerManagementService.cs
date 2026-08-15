@@ -129,7 +129,7 @@ public sealed class CustomerManagementService(
                 tenantContext.OrganizationId,
                 includeInactive,
                 search,
-                (page - 1) * pageSize,
+                PageResult<CustomerResponse>.CalculateSkip(page, pageSize),
                 pageSize,
                 cancellationToken);
         return new PageResult<CustomerResponse>(
@@ -253,6 +253,17 @@ public sealed class CustomerManagementService(
 
         if (!customer.IsActive)
         {
+            Error? duplicateError = await FindDuplicateAsync(
+                customer.OrganizationId,
+                customer.NormalizedEmail,
+                customer.NormalizedPhone,
+                customer.Id,
+                cancellationToken);
+            if (duplicateError is not null)
+            {
+                return Result.Failure(duplicateError);
+            }
+
             customer.Activate(timeProvider.GetUtcNow());
             return await SaveAsync(cancellationToken);
         }
@@ -308,25 +319,28 @@ public sealed class CustomerManagementService(
                 CustomerErrors.InvalidData);
         }
 
+        IReadOnlyList<CustomerAddress> addresses =
+            await customerRepository.ListAddressesAsync(
+                organizationId,
+                customerId,
+                cancellationToken);
+        bool makePrimary = data.IsPrimary
+            || !addresses.Any(existing => existing.IsActive && existing.IsPrimary);
+        if (makePrimary)
+        {
+            foreach (CustomerAddress existing in addresses.Where(existing => existing.IsActive))
+            {
+                existing.SetPrimary(false, nowUtc);
+            }
+            address.SetPrimary(true, nowUtc);
+        }
+
         customerRepository.AddAddress(address);
-        Result saveResult =
-            await SaveAsync(cancellationToken);
+        Result saveResult = await SaveAsync(cancellationToken);
 
         if (saveResult.IsFailure)
         {
-            return Result<CustomerAddressResponse>.Failure(
-                saveResult.Error);
-        }
-
-        if (data.IsPrimary)
-        {
-            await customerRepository.SetPrimaryAddressAsync(
-                organizationId,
-                customerId,
-                address.Id,
-                nowUtc,
-                cancellationToken);
-            address.SetPrimary(true, nowUtc);
+            return Result<CustomerAddressResponse>.Failure(saveResult.Error);
         }
 
         return Result<CustomerAddressResponse>.Success(
@@ -358,6 +372,12 @@ public sealed class CustomerManagementService(
             return Result<CustomerAddressResponse>.Failure(addressError);
 
         DateTimeOffset nowUtc = timeProvider.GetUtcNow();
+        IReadOnlyList<CustomerAddress> addresses =
+            await customerRepository.ListAddressesAsync(
+                tenantContext.OrganizationId,
+                customerId,
+                cancellationToken);
+        Guid? primaryAddressId = null;
 
         try
         {
@@ -371,9 +391,20 @@ public sealed class CustomerManagementService(
                 data.CountryCode,
                 nowUtc);
 
-            if (!data.IsPrimary)
+            if (data.IsPrimary)
             {
-                address.SetPrimary(false, nowUtc);
+                primaryAddressId = addressId;
+            }
+            else if (address.IsPrimary)
+            {
+                CustomerAddress? replacement = addresses
+                    .Where(existing => existing.IsActive && existing.Id != addressId)
+                    .OrderBy(existing => existing.CreatedAtUtc)
+                    .FirstOrDefault();
+                if (replacement is not null)
+                {
+                    primaryAddressId = replacement.Id;
+                }
             }
         }
         catch (ArgumentException)
@@ -391,15 +422,14 @@ public sealed class CustomerManagementService(
                 saveResult.Error);
         }
 
-        if (data.IsPrimary)
+        if (primaryAddressId is Guid newPrimaryAddressId)
         {
             await customerRepository.SetPrimaryAddressAsync(
                 tenantContext.OrganizationId,
                 customerId,
-                addressId,
+                newPrimaryAddressId,
                 nowUtc,
                 cancellationToken);
-            address.SetPrimary(true, nowUtc);
         }
 
         return Result<CustomerAddressResponse>.Success(
@@ -424,8 +454,24 @@ public sealed class CustomerManagementService(
                 CustomerErrors.AddressNotFound);
         }
 
-        address.Deactivate(timeProvider.GetUtcNow());
-        return await SaveAsync(cancellationToken);
+        DateTimeOffset nowUtc = timeProvider.GetUtcNow();
+        CustomerAddress? replacement = address.IsPrimary
+            ? (await customerRepository.ListAddressesAsync(
+                    tenantContext.OrganizationId,
+                    customerId,
+                    cancellationToken))
+                .Where(existing => existing.IsActive && existing.Id != addressId)
+                .OrderBy(existing => existing.CreatedAtUtc)
+                .FirstOrDefault()
+            : null;
+        await customerRepository.DeactivateAddressAndPromoteAsync(
+            tenantContext.OrganizationId,
+            customerId,
+            addressId,
+            replacement?.Id,
+            nowUtc,
+            cancellationToken);
+        return Result.Success();
     }
 
     public async Task<Result> ActivateAddressAsync(
@@ -446,7 +492,17 @@ public sealed class CustomerManagementService(
 
         if (!address.IsActive)
         {
-            address.Activate(timeProvider.GetUtcNow());
+            DateTimeOffset nowUtc = timeProvider.GetUtcNow();
+            address.Activate(nowUtc);
+            IReadOnlyList<CustomerAddress> addresses =
+                await customerRepository.ListAddressesAsync(
+                    tenantContext.OrganizationId,
+                    customerId,
+                    cancellationToken);
+            if (!addresses.Any(existing => existing.IsActive && existing.IsPrimary))
+            {
+                address.SetPrimary(true, nowUtc);
+            }
             return await SaveAsync(cancellationToken);
         }
 
@@ -499,7 +555,13 @@ public sealed class CustomerManagementService(
                 excludedCustomerId,
                 cancellationToken))
         {
-            return CustomerErrors.EmailAlreadyExists;
+            return await customerRepository.EmailBelongsToInactiveCustomerAsync(
+                organizationId,
+                normalizedEmail,
+                excludedCustomerId,
+                cancellationToken)
+                ? CustomerErrors.EmailBelongsToInactiveCustomer
+                : CustomerErrors.EmailAlreadyExists;
         }
 
         if (normalizedPhone is not null
@@ -509,7 +571,13 @@ public sealed class CustomerManagementService(
                 excludedCustomerId,
                 cancellationToken))
         {
-            return CustomerErrors.PhoneAlreadyExists;
+            return await customerRepository.PhoneBelongsToInactiveCustomerAsync(
+                organizationId,
+                normalizedPhone,
+                excludedCustomerId,
+                cancellationToken)
+                ? CustomerErrors.PhoneBelongsToInactiveCustomer
+                : CustomerErrors.PhoneAlreadyExists;
         }
 
         return null;

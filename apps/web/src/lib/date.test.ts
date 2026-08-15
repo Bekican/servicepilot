@@ -15,4 +15,17 @@ describe("organization time helpers", () => {
     expect(dateKey(instant, "Europe/Istanbul")).toBe("2026-08-01");
     expect(formatTime(instant, "Europe/Istanbul")).toMatch(/00[.:]30/);
   });
+
+  it("rejects a wall clock time skipped by the DST spring transition", () => {
+    expect(() =>
+      zonedLocalDateTimeToIso("2026-03-29T02:30", "Europe/Berlin"),
+    ).toThrow("Bu yerel saat, saat dilimi geçişi nedeniyle mevcut değil.");
+  });
+
+  it("round-trips an ambiguous wall clock time during the DST fall transition", () => {
+    const iso = zonedLocalDateTimeToIso("2026-10-25T02:30", "Europe/Berlin");
+
+    expect(dateKey(iso, "Europe/Berlin")).toBe("2026-10-25");
+    expect(formatTime(iso, "Europe/Berlin")).toMatch(/02[.:]30/);
+  });
 });

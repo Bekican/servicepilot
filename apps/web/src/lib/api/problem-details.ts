@@ -18,8 +18,14 @@ const translatedMessages: Record<string, string> = {
     "Bu e-posta organizasyonda zaten kayıtlı.",
   "Authentication.InvalidTimeZone": "Saat dilimi geçerli değil.",
   "Customer.EmailAlreadyExists": "Bu e-posta başka bir müşteride kullanılıyor.",
+  "Customer.EmailBelongsToInactiveCustomer":
+    "Bu e-posta pasif bir müşteride kayıtlı — o müşteriyi yeniden aktifleştirebilirsiniz.",
   "Customer.PhoneAlreadyExists": "Bu telefon başka bir müşteride kullanılıyor.",
+  "Customer.PhoneBelongsToInactiveCustomer":
+    "Bu telefon pasif bir müşteride kayıtlı — o müşteriyi yeniden aktifleştirebilirsiniz.",
   "Service.NameAlreadyExists": "Bu hizmet adı zaten kullanılıyor.",
+  "Service.NameBelongsToInactiveService":
+    "Bu ad pasif bir hizmette kayıtlı — o hizmeti yeniden aktifleştirebilirsiniz.",
   "Appointment.TechnicianOverlap":
     "Seçilen teknisyenin bu saat aralığında başka bir randevusu var.",
   "Appointment.InvalidTransition":
@@ -44,14 +50,18 @@ const translatedFieldErrors: Record<string, string> = {
 function fieldErrors(problem: ProblemDetails | undefined) {
   if (!problem?.errors) return undefined;
 
-  return Object.fromEntries(
-    Object.entries(problem.errors).flatMap(([field, codes]) => {
-      const code = codes[0];
-      return code
-        ? [[field, translatedFieldErrors[code] ?? "Bu alanı kontrol edin."]]
-        : [];
-    }),
-  );
+  const entries = Object.entries(problem.errors).flatMap(([field, codes]) => {
+    if (field === "$" || field.startsWith("$.") || field === "request") {
+      return [];
+    }
+
+    const code = codes[0];
+    return code
+      ? [[field, translatedFieldErrors[code] ?? "Bu alanı kontrol edin."]]
+      : [];
+  });
+
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 export function problemMessage(
@@ -88,9 +98,10 @@ export function problemActionState(
   fallback?: string,
 ) {
   const presentation = problemPresentation(problem, fallback);
+  const usableFieldErrors = fieldErrors(problem);
   return {
-    error: problem?.errors ? undefined : presentation.message,
-    fieldErrors: fieldErrors(problem),
+    error: usableFieldErrors ? undefined : presentation.message,
+    fieldErrors: usableFieldErrors,
     supportCode: presentation.supportCode,
   };
 }

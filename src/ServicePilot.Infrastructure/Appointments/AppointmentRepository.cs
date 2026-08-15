@@ -155,7 +155,7 @@ internal sealed class AppointmentRepository(
                     || appointment.TechnicianUserId
                         == query.TechnicianUserId
                 )
-            orderby appointment.StartAtUtc
+            orderby appointment.StartAtUtc, appointment.Id
             select new AppointmentDetails(
                 appointment.Id,
                 customer.Id,

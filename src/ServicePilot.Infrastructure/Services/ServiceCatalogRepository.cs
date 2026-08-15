@@ -57,6 +57,21 @@ internal sealed class ServiceCatalogRepository(
             cancellationToken);
     }
 
+    public Task<bool> NameBelongsToInactiveServiceAsync(
+        Guid organizationId,
+        string normalizedName,
+        Guid? excludedServiceId,
+        CancellationToken cancellationToken = default)
+    {
+        return dbContext.Services.AnyAsync(
+            service =>
+                service.OrganizationId == organizationId
+                && service.NormalizedName == normalizedName
+                && !service.IsActive
+                && (excludedServiceId == null || service.Id != excludedServiceId),
+            cancellationToken);
+    }
+
     public void Add(ServiceCatalogItem service)
     {
         dbContext.Services.Add(service);

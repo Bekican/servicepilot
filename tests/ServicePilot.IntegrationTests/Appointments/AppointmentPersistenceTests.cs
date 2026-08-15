@@ -9,6 +9,7 @@ using ServicePilot.Application.Reminders;
 using ServicePilot.Contracts.Appointments;
 using ServicePilot.Contracts.Authentication;
 using ServicePilot.Contracts.Customers;
+using ServicePilot.Contracts.Common;
 using ServicePilot.Contracts.Services;
 using ServicePilot.Domain.Appointments;
 using ServicePilot.Domain.Reminders;
@@ -196,6 +197,51 @@ public sealed class AppointmentPersistenceTests
         Assert.Equal(
             System.Net.HttpStatusCode.BadRequest,
             confirmResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Pagination_ShouldNotDuplicateAppointmentsWithTheSameStartTime()
+    {
+        AppointmentDependencies dependencies = await CreateDependenciesAsync();
+        DateTimeOffset start = DateTimeOffset.UtcNow.AddDays(5);
+        await _factory.ExecuteDbContextAsync(async dbContext =>
+        {
+            dbContext.Appointments.AddRange(Enumerable.Range(0, 25).Select(_ =>
+                new Appointment(
+                    Guid.NewGuid(),
+                    dependencies.OrganizationId,
+                    dependencies.CustomerId,
+                    dependencies.ServiceId,
+                    null,
+                    start,
+                    start.AddHours(1),
+                    DateTimeOffset.UtcNow)));
+            await dbContext.SaveChangesAsync();
+            return 0;
+        });
+
+        PagedResponse<ServicePilot.Contracts.Appointments.AppointmentResponse> first =
+            await GetAppointmentPageAsync(dependencies.AccessToken, 1, 13);
+        PagedResponse<ServicePilot.Contracts.Appointments.AppointmentResponse> second =
+            await GetAppointmentPageAsync(dependencies.AccessToken, 2, 13);
+        Guid[] ids = first.Items.Concat(second.Items).Select(item => item.Id).ToArray();
+
+        Assert.Equal(25, ids.Length);
+        Assert.Equal(25, ids.Distinct().Count());
+    }
+
+    private async Task<PagedResponse<ServicePilot.Contracts.Appointments.AppointmentResponse>>
+        GetAppointmentPageAsync(string accessToken, int page, int pageSize)
+    {
+        using HttpRequestMessage request = new(
+            HttpMethod.Get,
+            $"/api/appointments?page={page}&pageSize={pageSize}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        HttpResponseMessage response = await _client.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        return Assert.IsType<PagedResponse<ServicePilot.Contracts.Appointments.AppointmentResponse>>(
+            await response.Content.ReadFromJsonAsync<
+                PagedResponse<ServicePilot.Contracts.Appointments.AppointmentResponse>>());
     }
 
     private static Appointment CreateAppointment(

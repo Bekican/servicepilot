@@ -105,6 +105,31 @@ public sealed class ServiceCatalogApiTests
                 && !item.IsActive);
     }
 
+    [Fact]
+    public async Task DuplicateInactiveServiceName_ShouldSuggestReactivation()
+    {
+        AuthenticationTokenResponse owner = await RegisterOwnerAsync();
+        ServiceUpsertRequest request = new("Inactive Repair", 60);
+        HttpResponseMessage created = await SendAsync(owner.AccessToken, request);
+        ServiceResponse service = Assert.IsType<ServiceResponse>(
+            await created.Content.ReadFromJsonAsync<ServiceResponse>());
+        using HttpRequestMessage deactivate = new(
+            HttpMethod.Patch,
+            $"/api/services/{service.Id}/status");
+        deactivate.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            owner.AccessToken);
+        deactivate.Content = JsonContent.Create(new ServiceStatusRequest(false));
+        (await _client.SendAsync(deactivate)).EnsureSuccessStatusCode();
+
+        HttpResponseMessage duplicate = await SendAsync(owner.AccessToken, request);
+
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        Assert.Contains(
+            "Service.NameBelongsToInactiveService",
+            await duplicate.Content.ReadAsStringAsync());
+    }
+
     private async Task<HttpResponseMessage> SendAsync(
         string accessToken,
         ServiceUpsertRequest body)

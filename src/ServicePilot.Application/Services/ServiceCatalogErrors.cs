@@ -18,4 +18,7 @@ public static class ServiceCatalogErrors
     public static readonly Error NameAlreadyExists = new(
         "Service.NameAlreadyExists",
         "A service with this name already exists");
+    public static readonly Error NameBelongsToInactiveService = new(
+        "Service.NameBelongsToInactiveService",
+        "This name belongs to an inactive service");
 }

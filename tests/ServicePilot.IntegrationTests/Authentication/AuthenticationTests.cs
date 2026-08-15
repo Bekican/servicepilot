@@ -3,7 +3,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
+using ServicePilot.Application.Email;
 using ServicePilot.Contracts.Authentication;
 using ServicePilot.Domain.Users;
 using ServicePilot.IntegrationTests.Infrastructure;
@@ -327,11 +329,17 @@ public sealed class AuthenticationTests
                 registration.Email));
         Assert.Equal(HttpStatusCode.Accepted, requestResponse.StatusCode);
 
-        string body = Assert.Single(_factory.EmailSender.Messages).TextBody;
+        Assert.Empty(_factory.EmailSender.Messages);
+        await ProcessEmailOutboxAsync();
+
+        string body = Assert.Single(
+            _factory.EmailSender.Messages,
+            message => message.Recipient == registration.Email).TextBody;
         string link = Assert.Single(
             body.Split(Environment.NewLine),
             line => line.StartsWith("https://", StringComparison.Ordinal));
         string token = new Uri(link).Query["?token=".Length..];
+        Assert.StartsWith("https://servicepilot.test/app/password-reset", link);
         const string newPassword = "new-correct-password";
 
         HttpResponseMessage completeResponse = await _client.PostAsJsonAsync(
@@ -367,6 +375,41 @@ public sealed class AuthenticationTests
             "/api/auth/password-reset/complete",
             new CompletePasswordResetRequest(token, "another-password"));
         Assert.Equal(HttpStatusCode.BadRequest, reusedToken.StatusCode);
+    }
+
+    [Fact]
+    public async Task PasswordResetComplete_ShouldAllowOnlyOneConcurrentUse()
+    {
+        _factory.EmailSender.Clear();
+        RegisterRequest registration = CreateRegisterRequest();
+        (await _client.PostAsJsonAsync("/api/auth/register", registration))
+            .EnsureSuccessStatusCode();
+        (await _client.PostAsJsonAsync(
+            "/api/auth/password-reset/request",
+            new PasswordResetRequest(registration.OrganizationSlug, registration.Email)))
+            .EnsureSuccessStatusCode();
+        await ProcessEmailOutboxAsync();
+        string body = Assert.Single(
+            _factory.EmailSender.Messages,
+            message => message.Recipient == registration.Email).TextBody;
+        string link = Assert.Single(
+            body.Split(Environment.NewLine),
+            line => line.StartsWith("https://", StringComparison.Ordinal));
+        string token = new Uri(link).Query["?token=".Length..];
+
+        Task<HttpResponseMessage> first = _client.PostAsJsonAsync(
+            "/api/auth/password-reset/complete",
+            new CompletePasswordResetRequest(token, "first-new-password"));
+        Task<HttpResponseMessage> second = _client.PostAsJsonAsync(
+            "/api/auth/password-reset/complete",
+            new CompletePasswordResetRequest(token, "second-new-password"));
+        HttpStatusCode[] statuses = (await Task.WhenAll(first, second))
+            .Select(response => response.StatusCode)
+            .OrderBy(status => status)
+            .ToArray();
+
+        Assert.Contains(HttpStatusCode.NoContent, statuses);
+        Assert.Contains(HttpStatusCode.BadRequest, statuses);
     }
 
     [Fact]
@@ -408,6 +451,14 @@ public sealed class AuthenticationTests
         return Assert.IsType<
             AuthenticationTokenResponse>(
                 authentication);
+    }
+
+    private async Task ProcessEmailOutboxAsync()
+    {
+        await using AsyncServiceScope scope = _factory.Services.CreateAsyncScope();
+        EmailOutboxProcessor processor = scope.ServiceProvider
+            .GetRequiredService<EmailOutboxProcessor>();
+        Assert.True(await processor.ProcessDueAsync() >= 1);
     }
 
     private static RegisterRequest CreateRegisterRequest()

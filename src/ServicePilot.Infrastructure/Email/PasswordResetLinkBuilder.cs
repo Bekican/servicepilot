@@ -2,13 +2,15 @@ using ServicePilot.Application.Abstractions.Email;
 
 namespace ServicePilot.Infrastructure.Email;
 
-internal sealed class PasswordResetLinkBuilder(InvitationLinkOptions options)
+internal sealed class PasswordResetLinkBuilder(PasswordResetLinkOptions options)
     : IPasswordResetLinkBuilder
 {
     public string Build(string rawToken)
     {
-        Uri invitationUri = new(options.PublicBaseUrl);
-        Uri resetUri = new(invitationUri, "/password-reset");
+        string baseUrl = options.PublicBaseUrl.EndsWith("/", StringComparison.Ordinal)
+            ? options.PublicBaseUrl
+            : options.PublicBaseUrl + "/";
+        Uri resetUri = new(new Uri(baseUrl), "password-reset");
         return $"{resetUri}?token={Uri.EscapeDataString(rawToken)}";
     }
 }

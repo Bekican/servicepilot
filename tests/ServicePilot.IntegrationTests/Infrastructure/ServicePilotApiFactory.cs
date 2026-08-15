@@ -41,11 +41,17 @@ public sealed class ServicePilotApiFactory
             "Invitations:PublicBaseUrl",
             "https://servicepilot.test/invitations/accept");
         builder.UseSetting(
+            "PasswordReset:PublicBaseUrl",
+            "https://servicepilot.test/app/");
+        builder.UseSetting(
             "RateLimiting:AuthenticationPermitLimit",
             "1000");
         builder.UseSetting(
             "RateLimiting:InvitationPermitLimit",
             "1000");
+        builder.UseSetting(
+            "RateLimiting:PasswordResetPermitLimit",
+            "20");
 
         builder.ConfigureServices(services =>
         {

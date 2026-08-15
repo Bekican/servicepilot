@@ -67,4 +67,19 @@ describe("problemMessage", () => {
       },
     });
   });
+
+  it("falls back to the general error when model binding keys are not form fields", () => {
+    expect(
+      problemActionState({
+        code: "Appointment.InvalidData",
+        errors: {
+          "$.startAt": ["Invalid"],
+          request: ["Invalid"],
+        },
+      }),
+    ).toMatchObject({
+      error: expect.stringContaining("Randevu zamanı"),
+      fieldErrors: undefined,
+    });
+  });
 });

@@ -45,7 +45,9 @@ public static partial class CustomerContactNormalizer
             normalized = "+90" + normalized[1..];
         }
 
-        if (!E164Regex().IsMatch(normalized))
+        if (normalized.StartsWith("+90", StringComparison.Ordinal)
+            ? !TurkeyE164PhoneRegex().IsMatch(normalized)
+            : !E164Regex().IsMatch(normalized))
         {
             throw new ArgumentException(
                 "Customer phone must be a valid E.164 number",
@@ -64,4 +66,9 @@ public static partial class CustomerContactNormalizer
         @"^05\d{9}$",
         RegexOptions.CultureInvariant)]
     private static partial Regex LocalTurkeyPhoneRegex();
+
+    [GeneratedRegex(
+        @"^\+90[1-9]\d{9}$",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex TurkeyE164PhoneRegex();
 }
