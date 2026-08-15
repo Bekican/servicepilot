@@ -8,6 +8,8 @@ import { PendingButton } from "@/components/shared/pending-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  activateAddressAction,
+  activateCustomerAction,
   deactivateAddressAction,
   deactivateCustomerAction,
   setPrimaryAddressAction,
@@ -48,14 +50,22 @@ export default async function CustomerDetailPage({
     <>
       <PageHeader
         action={
-          canWrite && customer.isActive ? (
-            <ConfirmAction
-              action={deactivateCustomerAction.bind(null, id)}
-              confirmLabel="Müşteriyi pasifleştir"
-              description="Müşteri yeni işlemlerde kullanılamayacak; geçmiş randevu ve servis kayıtları korunacak."
-              title="Müşteri pasifleştirilsin mi?"
-              triggerLabel="Pasifleştir"
-            />
+          canWrite ? (
+            customer.isActive ? (
+              <ConfirmAction
+                action={deactivateCustomerAction.bind(null, id)}
+                confirmLabel="Müşteriyi pasifleştir"
+                description="Müşteri yeni işlemlerde kullanılamayacak; geçmiş randevu ve servis kayıtları korunacak."
+                title="Müşteri pasifleştirilsin mi?"
+                triggerLabel="Pasifleştir"
+              />
+            ) : (
+              <form action={activateCustomerAction.bind(null, id)}>
+                <PendingButton pendingLabel="Etkinleştiriliyor…" type="submit">
+                  Yeniden etkinleştir
+                </PendingButton>
+              </form>
+            )
           ) : null
         }
         description={`${customer.customerNumber} · ${
@@ -99,48 +109,52 @@ export default async function CustomerDetailPage({
               <CardTitle>Adresler</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {customer.addresses
-                .filter((address) => address.isActive)
-                .map((address) => (
-                  <div className="rounded-lg border p-4" key={address.id}>
-                    <div className="flex items-start gap-3">
-                      <MapPin className="text-muted-foreground mt-0.5 size-4" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">
-                          {address.label ?? "Adres"}
-                          {address.isPrimary ? (
-                            <span className="text-primary ml-2 text-xs">
-                              Birincil
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="text-muted-foreground mt-1 text-sm">
-                          {address.line1}
-                          {address.line2 ? `, ${address.line2}` : ""}
-                          <br />
-                          {address.postalCode} {address.city} /{" "}
-                          {address.countryCode}
-                        </p>
-                        {canWrite ? (
-                          <div className="mt-3 flex gap-2">
-                            {!address.isPrimary ? (
-                              <form
-                                action={setPrimaryAddressAction.bind(
-                                  null,
-                                  id,
-                                  address.id,
-                                )}
+              {customer.addresses.map((address) => (
+                <div className="rounded-lg border p-4" key={address.id}>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="text-muted-foreground mt-0.5 size-4" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">
+                        {address.label ?? "Adres"}
+                        {address.isPrimary ? (
+                          <span className="text-primary ml-2 text-xs">
+                            Birincil
+                          </span>
+                        ) : null}
+                        {!address.isActive ? (
+                          <span className="text-muted-foreground ml-2 text-xs">
+                            Pasif
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        {address.line1}
+                        {address.line2 ? `, ${address.line2}` : ""}
+                        <br />
+                        {address.postalCode} {address.city} /{" "}
+                        {address.countryCode}
+                      </p>
+                      {canWrite && customer.isActive ? (
+                        <div className="mt-3 flex gap-2">
+                          {address.isActive && !address.isPrimary ? (
+                            <form
+                              action={setPrimaryAddressAction.bind(
+                                null,
+                                id,
+                                address.id,
+                              )}
+                            >
+                              <PendingButton
+                                pendingLabel="İşleniyor…"
+                                size="sm"
+                                type="submit"
+                                variant="outline"
                               >
-                                <PendingButton
-                                  pendingLabel="İşleniyor…"
-                                  size="sm"
-                                  type="submit"
-                                  variant="outline"
-                                >
-                                  Birincil yap
-                                </PendingButton>
-                              </form>
-                            ) : null}
+                                Birincil yap
+                              </PendingButton>
+                            </form>
+                          ) : null}
+                          {address.isActive ? (
                             <ConfirmAction
                               action={deactivateAddressAction.bind(
                                 null,
@@ -154,15 +168,33 @@ export default async function CustomerDetailPage({
                               triggerSize="sm"
                               triggerVariant="ghost"
                             />
-                          </div>
-                        ) : null}
-                      </div>
+                          ) : (
+                            <form
+                              action={activateAddressAction.bind(
+                                null,
+                                id,
+                                address.id,
+                              )}
+                            >
+                              <PendingButton
+                                pendingLabel="Etkinleştiriliyor…"
+                                size="sm"
+                                type="submit"
+                                variant="outline"
+                              >
+                                Yeniden etkinleştir
+                              </PendingButton>
+                            </form>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
-                ))}
-              {!customer.addresses.some((address) => address.isActive) ? (
+                </div>
+              ))}
+              {!customer.addresses.length ? (
                 <p className="text-muted-foreground text-sm">
-                  Aktif adres bulunmuyor.
+                  Henüz adres bulunmuyor.
                 </p>
               ) : null}
             </CardContent>

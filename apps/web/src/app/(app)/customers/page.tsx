@@ -4,6 +4,7 @@ import { Plus, Search } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { PaginationNav } from "@/components/shared/pagination-nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createServerApiClient } from "@/lib/api/server-client";
-import type { Customer } from "@/lib/api/types";
+import type { CustomerPage } from "@/lib/api/types";
 import { requireSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Müşteriler" };
@@ -24,25 +25,25 @@ export const metadata: Metadata = { title: "Müşteriler" };
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; inactive?: string }>;
+  searchParams: Promise<{ search?: string; inactive?: string; page?: string }>;
 }) {
   const session = await requireSession();
   const query = await searchParams;
   const includeInactive = query.inactive === "true";
   const client = await createServerApiClient();
+  const page = Math.max(1, Number(query.page) || 1);
   const { data } = await client.GET("/api/customers", {
-    params: { query: { includeInactive } },
+    params: {
+      query: {
+        includeInactive,
+        search: query.search || undefined,
+        page,
+        pageSize: 20,
+      },
+    },
   });
-  const search = query.search?.trim().toLocaleLowerCase("tr-TR") ?? "";
-  const customers = ((data ?? []) as Customer[]).filter((customer) => {
-    const name =
-      customer.type === "Company"
-        ? customer.companyName
-        : `${customer.firstName ?? ""} ${customer.lastName ?? ""}`;
-    return `${customer.customerNumber} ${name} ${customer.email ?? ""}`
-      .toLocaleLowerCase("tr-TR")
-      .includes(search);
-  });
+  const result = data as CustomerPage | undefined;
+  const customers = result?.items ?? [];
 
   return (
     <>
@@ -149,6 +150,13 @@ export default async function CustomersPage({
           title="Müşteri bulunamadı"
         />
       )}
+      <PaginationNav
+        label="Müşteri sayfaları"
+        page={page}
+        pathname="/customers"
+        query={query}
+        totalPages={Number(result?.totalPages ?? 0)}
+      />
     </>
   );
 }

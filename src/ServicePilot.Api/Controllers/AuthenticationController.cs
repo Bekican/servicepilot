@@ -2,10 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
-using ServicePilot.Application.Authentication;
 using ServicePilot.Api.Errors;
+using ServicePilot.Application.Authentication;
 using ServicePilot.Application.Authentication.AcceptInvitation;
 using ServicePilot.Application.Authentication.Login;
+using ServicePilot.Application.Authentication.PasswordReset;
 using ServicePilot.Application.Authentication.Register;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Users.Invitations;
@@ -20,6 +21,7 @@ public sealed class AuthenticationController(
     RegisterOrganizationOwnerHandler registerHandler,
     LoginHandler loginHandler,
     AcceptInvitationHandler acceptInvitationHandler,
+    PasswordResetService passwordResetService,
     CurrentSessionService currentSessionService,
     ApiProblemDetailsFactory problemFactory)
     : ServicePilotControllerBase(problemFactory)
@@ -131,6 +133,34 @@ public sealed class AuthenticationController(
         }
 
         return Ok(MapResponse(result.Value));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("password-reset/request")]
+    public async Task<IActionResult> RequestPasswordReset(
+        PasswordResetRequest request,
+        CancellationToken cancellationToken)
+    {
+        await passwordResetService.RequestAsync(
+            request.OrganizationSlug,
+            request.Email,
+            cancellationToken);
+        return Accepted();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("password-reset/complete")]
+    public async Task<IActionResult> CompletePasswordReset(
+        CompletePasswordResetRequest request,
+        CancellationToken cancellationToken)
+    {
+        Result result = await passwordResetService.CompleteAsync(
+            request.Token,
+            request.Password,
+            cancellationToken);
+        return result.IsSuccess
+            ? NoContent()
+            : ToProblem(result.Error);
     }
 
     [Authorize]

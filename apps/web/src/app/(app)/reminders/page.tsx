@@ -5,6 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { ActionMessage } from "@/components/shared/action-message";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { PaginationNav } from "@/components/shared/pagination-nav";
 import { PendingButton } from "@/components/shared/pending-button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { retryReminderAction } from "@/features/reminders/actions";
 import { createServerApiClient } from "@/lib/api/server-client";
-import type { Reminder } from "@/lib/api/types";
+import type { ReminderPage } from "@/lib/api/types";
 import { formatDate, formatTime } from "@/lib/date";
 import { requireSession } from "@/lib/auth/session";
 
@@ -33,15 +34,18 @@ export default async function RemindersPage({
     error?: string;
     success?: string;
     supportCode?: string;
+    page?: string;
   }>;
 }) {
   const query = await searchParams;
   const session = await requireSession();
   const client = await createServerApiClient();
+  const page = Math.max(1, Number(query.page) || 1);
   const { data } = await client.GET("/api/reminders", {
-    params: { query: { status: query.status } },
+    params: { query: { status: query.status, page, pageSize: 20 } },
   });
-  const reminders = (data ?? []) as Reminder[];
+  const reminderPage = data as ReminderPage | undefined;
+  const reminders = reminderPage?.items ?? [];
 
   return (
     <>
@@ -135,6 +139,13 @@ export default async function RemindersPage({
           title="Hatırlatma bulunamadı"
         />
       )}
+      <PaginationNav
+        label="Hatırlatma sayfaları"
+        page={page}
+        pathname="/reminders"
+        query={query}
+        totalPages={Number(reminderPage?.totalPages ?? 0)}
+      />
     </>
   );
 }

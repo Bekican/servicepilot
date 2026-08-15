@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 
 import { FormError } from "@/components/shared/form-error";
+import { FieldError } from "@/components/shared/field-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,6 +76,7 @@ export function AuthForm({
             autoComplete="organization"
             label="Organizasyon adı"
             name="organizationName"
+            error={state.fieldErrors?.organizationName}
             onChange={(event) => {
               const name = event.target.value;
               setOrganizationName(name);
@@ -93,6 +95,7 @@ export function AuthForm({
             maxLength={100}
             minLength={2}
             name="organizationSlug"
+            error={state.fieldErrors?.organizationSlug}
             onChange={(event) => {
               setOrganizationSlug(event.target.value.toLowerCase());
               setOrganizationSlugEdited(true);
@@ -110,6 +113,7 @@ export function AuthForm({
           autoCapitalize="none"
           label="Organizasyon adresi"
           name="organizationSlug"
+          error={state.fieldErrors?.organizationSlug}
           placeholder="atlas-teknik"
         />
       ) : null}
@@ -120,12 +124,14 @@ export function AuthForm({
             autoComplete="given-name"
             label="Ad"
             name="firstName"
+            error={state.fieldErrors?.firstName}
             placeholder="Bekir"
           />
           <Field
             autoComplete="family-name"
             label="Soyad"
             name="lastName"
+            error={state.fieldErrors?.lastName}
             placeholder="Çakmak"
           />
         </div>
@@ -137,6 +143,7 @@ export function AuthForm({
           autoComplete="email"
           label="E-posta"
           name="email"
+          error={state.fieldErrors?.email}
           placeholder="owner@firma.com"
           type="email"
         />
@@ -146,6 +153,7 @@ export function AuthForm({
         autoComplete={mode === "login" ? "current-password" : "new-password"}
         label="Parola"
         name="password"
+        error={state.fieldErrors?.password}
         placeholder="En az 8 karakter"
         type="password"
       />
@@ -163,6 +171,15 @@ export function AuthForm({
       ) : null}
 
       <SubmitButton mode={mode} />
+
+      {mode === "login" ? (
+        <Link
+          className="text-primary block text-center text-sm hover:underline"
+          href="/password-reset/request"
+        >
+          Parolamı unuttum
+        </Link>
+      ) : null}
 
       {mode === "login" ? (
         <p className="text-muted-foreground text-center text-sm">
@@ -192,21 +209,27 @@ export function AuthForm({
 
 function Field({
   description,
+  error,
   label,
   name,
   ...props
 }: React.ComponentProps<typeof Input> & {
   description?: string;
+  error?: string;
   label: string;
   name: string;
 }) {
   const descriptionId = description ? `${name}-description` : undefined;
+  const errorId = error ? `${name}-error` : undefined;
 
   return (
     <div className="space-y-2">
       <Label htmlFor={name}>{label}</Label>
       <Input
-        aria-describedby={descriptionId}
+        aria-describedby={
+          [descriptionId, errorId].filter(Boolean).join(" ") || undefined
+        }
+        aria-invalid={Boolean(error)}
         className="h-11"
         id={name}
         name={name}
@@ -218,6 +241,7 @@ function Field({
           {description}
         </p>
       ) : null}
+      <FieldError id={`${name}-error`} message={error} />
     </div>
   );
 }

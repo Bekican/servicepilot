@@ -18,6 +18,8 @@ export interface paths {
                     to?: string;
                     status?: string;
                     technicianId?: string;
+                    page?: number | string;
+                    pageSize?: number | string;
                 };
                 header?: never;
                 path?: never;
@@ -31,9 +33,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["AppointmentResponse"][];
-                        "application/json": components["schemas"]["AppointmentResponse"][];
-                        "text/json": components["schemas"]["AppointmentResponse"][];
+                        "text/plain": components["schemas"]["PagedResponseOfAppointmentResponse"];
+                        "application/json": components["schemas"]["PagedResponseOfAppointmentResponse"];
+                        "text/json": components["schemas"]["PagedResponseOfAppointmentResponse"];
                     };
                 };
             };
@@ -397,6 +399,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/password-reset/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PasswordResetRequest"];
+                    "text/json": components["schemas"]["PasswordResetRequest"];
+                    "application/*+json": components["schemas"]["PasswordResetRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/password-reset/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CompletePasswordResetRequest"];
+                    "text/json": components["schemas"]["CompletePasswordResetRequest"];
+                    "application/*+json": components["schemas"]["CompletePasswordResetRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/me": {
         parameters: {
             query?: never;
@@ -456,6 +536,9 @@ export interface paths {
             parameters: {
                 query?: {
                     includeInactive?: boolean;
+                    search?: string;
+                    page?: number | string;
+                    pageSize?: number | string;
                 };
                 header?: never;
                 path?: never;
@@ -469,9 +552,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["CustomerResponse"][];
-                        "application/json": components["schemas"]["CustomerResponse"][];
-                        "text/json": components["schemas"]["CustomerResponse"][];
+                        "text/plain": components["schemas"]["PagedResponseOfCustomerResponse"];
+                        "application/json": components["schemas"]["PagedResponseOfCustomerResponse"];
+                        "text/json": components["schemas"]["PagedResponseOfCustomerResponse"];
                     };
                 };
             };
@@ -580,6 +663,41 @@ export interface paths {
         trace?: never;
     };
     "/api/customers/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/customers/{id}/activate": {
         parameters: {
             query?: never;
             header?: never;
@@ -741,6 +859,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/customers/{customerId}/addresses/{addressId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    customerId: string;
+                    addressId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/customers/{customerId}/addresses/{addressId}/primary": {
         parameters: {
             query?: never;
@@ -829,6 +983,8 @@ export interface paths {
             parameters: {
                 query?: {
                     status?: string;
+                    page?: number | string;
+                    pageSize?: number | string;
                 };
                 header?: never;
                 path?: never;
@@ -842,9 +998,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["ReminderResponse"][];
-                        "application/json": components["schemas"]["ReminderResponse"][];
-                        "text/json": components["schemas"]["ReminderResponse"][];
+                        "text/plain": components["schemas"]["PagedResponseOfReminderResponse"];
+                        "application/json": components["schemas"]["PagedResponseOfReminderResponse"];
+                        "text/json": components["schemas"]["PagedResponseOfReminderResponse"];
                     };
                 };
             };
@@ -1469,6 +1625,7 @@ export interface components {
             customerId: string;
             customerNumber: string;
             customerDisplayName: string;
+            customerHasEmail: boolean;
             /** Format: uuid */
             serviceId: string;
             serviceName: string;
@@ -1509,6 +1666,10 @@ export interface components {
         };
         ChangeUserStatusRequest: {
             isActive: boolean;
+        };
+        CompletePasswordResetRequest: {
+            token: string;
+            password: string;
         };
         CreateAppointmentRequest: {
             /** Format: uuid */
@@ -1613,6 +1774,43 @@ export interface components {
             organizationSlug: string;
             email: string;
             password: string;
+        };
+        PagedResponseOfAppointmentResponse: {
+            items: components["schemas"]["AppointmentResponse"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int32 */
+            totalPages: number | string;
+        };
+        PagedResponseOfCustomerResponse: {
+            items: components["schemas"]["CustomerResponse"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int32 */
+            totalPages: number | string;
+        };
+        PagedResponseOfReminderResponse: {
+            items: components["schemas"]["ReminderResponse"][];
+            /** Format: int32 */
+            page: number | string;
+            /** Format: int32 */
+            pageSize: number | string;
+            /** Format: int32 */
+            totalCount: number | string;
+            /** Format: int32 */
+            totalPages: number | string;
+        };
+        PasswordResetRequest: {
+            organizationSlug: string;
+            email: string;
         };
         ProblemDetails: {
             type?: null | string;

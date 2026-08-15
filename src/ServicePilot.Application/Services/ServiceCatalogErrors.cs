@@ -10,6 +10,11 @@ public static class ServiceCatalogErrors
     public static readonly Error InvalidData = new(
         "Service.InvalidData",
         "Service data is invalid");
+    public static readonly Error InvalidName = Error.ForField(
+        "Service.InvalidName", "Service name is invalid", "name", "Invalid");
+    public static readonly Error InvalidDuration = Error.ForField(
+        "Service.InvalidDuration", "Service duration is invalid",
+        "defaultDurationMinutes", "Invalid");
     public static readonly Error NameAlreadyExists = new(
         "Service.NameAlreadyExists",
         "A service with this name already exists");

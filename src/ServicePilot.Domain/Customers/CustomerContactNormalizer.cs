@@ -40,6 +40,11 @@ public static partial class CustomerContactNormalizer
             .Replace("(", string.Empty)
             .Replace(")", string.Empty);
 
+        if (LocalTurkeyPhoneRegex().IsMatch(normalized))
+        {
+            normalized = "+90" + normalized[1..];
+        }
+
         if (!E164Regex().IsMatch(normalized))
         {
             throw new ArgumentException(
@@ -54,4 +59,9 @@ public static partial class CustomerContactNormalizer
         @"^\+[1-9]\d{7,14}$",
         RegexOptions.CultureInvariant)]
     private static partial Regex E164Regex();
+
+    [GeneratedRegex(
+        @"^05\d{9}$",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex LocalTurkeyPhoneRegex();
 }

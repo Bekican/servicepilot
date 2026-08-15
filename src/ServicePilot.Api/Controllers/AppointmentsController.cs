@@ -6,6 +6,7 @@ using ServicePilot.Api.Errors;
 using ServicePilot.Application.Appointments;
 using ServicePilot.Application.Common;
 using ServicePilot.Contracts.Appointments;
+using ServicePilot.Contracts.Common;
 
 using ApplicationResponse =
     ServicePilot.Application.Appointments.AppointmentResponse;
@@ -51,26 +52,33 @@ public sealed class AppointmentsController(
 
     [HttpGet]
     [ProducesResponseType(
-        typeof(IReadOnlyList<ContractResponse>),
+        typeof(PagedResponse<ContractResponse>),
         StatusCodes.Status200OK)]
     public async Task<IActionResult> List(
         [FromQuery] DateTimeOffset? from,
         [FromQuery] DateTimeOffset? to,
         [FromQuery] string? status,
         [FromQuery] Guid? technicianId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        Result<IReadOnlyList<ApplicationResponse>> result =
-            await service.ListAsync(
+        Result<PageResult<ApplicationResponse>> result =
+            await service.ListPageAsync(
                 new AppointmentFilterData(
                     from,
                     to,
                     status,
-                    technicianId),
+                    technicianId), page, pageSize,
                 cancellationToken);
 
         return result.IsSuccess
-            ? Ok(result.Value.Select(Map))
+            ? Ok(new PagedResponse<ContractResponse>(
+                result.Value.Items.Select(Map).ToArray(),
+                result.Value.Page,
+                result.Value.PageSize,
+                result.Value.TotalCount,
+                result.Value.TotalPages))
             : ToProblem(result.Error);
     }
 
@@ -140,6 +148,7 @@ public sealed class AppointmentsController(
             response.CustomerId,
             response.CustomerNumber,
             response.CustomerDisplayName,
+            response.CustomerHasEmail,
             response.ServiceId,
             response.ServiceName,
             response.TechnicianUserId,

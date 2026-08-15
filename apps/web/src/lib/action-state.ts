@@ -3,6 +3,7 @@ export type ActionState = {
   supportCode?: string;
   redirectTo?: string;
   values?: Record<string, string>;
+  fieldErrors?: Record<string, string>;
 };
 
 export const initialActionState: ActionState = {};

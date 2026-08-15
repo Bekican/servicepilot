@@ -39,8 +39,9 @@ internal static class InvitationRules
     {
         return new EmailMessage(
             recipient,
-            "Your ServicePilot invitation",
-            $"Use this link to create your account: {invitationLink}{Environment.NewLine}"
-            + $"The link expires at {expiresAtUtc:O}.");
+            "ServicePilot ekip davetiniz",
+            "ServicePilot hesabınızı oluşturmak için aşağıdaki bağlantıyı kullanın:"
+            + $"{Environment.NewLine}{invitationLink}{Environment.NewLine}{Environment.NewLine}"
+            + "Bu tek kullanımlık bağlantı 24 saat geçerlidir.");
     }
 }

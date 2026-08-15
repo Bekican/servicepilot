@@ -308,6 +308,90 @@ public sealed class AuthenticationTests
             response.StatusCode);
     }
 
+    [Fact]
+    public async Task PasswordReset_ShouldChangePassword_InvalidateOldSession_AndRejectReuse()
+    {
+        _factory.EmailSender.Clear();
+        RegisterRequest registration = CreateRegisterRequest();
+        HttpResponseMessage registerResponse = await _client.PostAsJsonAsync(
+            "/api/auth/register",
+            registration);
+        registerResponse.EnsureSuccessStatusCode();
+        AuthenticationTokenResponse authentication = Assert.IsType<AuthenticationTokenResponse>(
+            await registerResponse.Content.ReadFromJsonAsync<AuthenticationTokenResponse>());
+
+        HttpResponseMessage requestResponse = await _client.PostAsJsonAsync(
+            "/api/auth/password-reset/request",
+            new PasswordResetRequest(
+                registration.OrganizationSlug,
+                registration.Email));
+        Assert.Equal(HttpStatusCode.Accepted, requestResponse.StatusCode);
+
+        string body = Assert.Single(_factory.EmailSender.Messages).TextBody;
+        string link = Assert.Single(
+            body.Split(Environment.NewLine),
+            line => line.StartsWith("https://", StringComparison.Ordinal));
+        string token = new Uri(link).Query["?token=".Length..];
+        const string newPassword = "new-correct-password";
+
+        HttpResponseMessage completeResponse = await _client.PostAsJsonAsync(
+            "/api/auth/password-reset/complete",
+            new CompletePasswordResetRequest(token, newPassword));
+        Assert.Equal(HttpStatusCode.NoContent, completeResponse.StatusCode);
+
+        using HttpRequestMessage oldSessionRequest = new(HttpMethod.Get, "/api/auth/me");
+        oldSessionRequest.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            authentication.AccessToken);
+        Assert.Equal(
+            HttpStatusCode.Unauthorized,
+            (await _client.SendAsync(oldSessionRequest)).StatusCode);
+
+        HttpResponseMessage oldPasswordLogin = await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(
+                registration.OrganizationSlug,
+                registration.Email,
+                registration.Password));
+        Assert.Equal(HttpStatusCode.Unauthorized, oldPasswordLogin.StatusCode);
+
+        HttpResponseMessage newPasswordLogin = await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new LoginRequest(
+                registration.OrganizationSlug,
+                registration.Email,
+                newPassword));
+        Assert.Equal(HttpStatusCode.OK, newPasswordLogin.StatusCode);
+
+        HttpResponseMessage reusedToken = await _client.PostAsJsonAsync(
+            "/api/auth/password-reset/complete",
+            new CompletePasswordResetRequest(token, "another-password"));
+        Assert.Equal(HttpStatusCode.BadRequest, reusedToken.StatusCode);
+    }
+
+    [Fact]
+    public async Task PasswordResetRequest_ShouldNotRevealWhetherAccountExists()
+    {
+        _factory.EmailSender.Clear();
+        RegisterRequest registration = CreateRegisterRequest();
+        (await _client.PostAsJsonAsync("/api/auth/register", registration))
+            .EnsureSuccessStatusCode();
+
+        HttpResponseMessage existing = await _client.PostAsJsonAsync(
+            "/api/auth/password-reset/request",
+            new PasswordResetRequest(
+                registration.OrganizationSlug,
+                registration.Email));
+        HttpResponseMessage missing = await _client.PostAsJsonAsync(
+            "/api/auth/password-reset/request",
+            new PasswordResetRequest(
+                registration.OrganizationSlug,
+                $"missing-{Guid.NewGuid():N}@example.com"));
+
+        Assert.Equal(HttpStatusCode.Accepted, existing.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, missing.StatusCode);
+    }
+
     private async Task<AuthenticationTokenResponse> RegisterAsync()
     {
         HttpResponseMessage response =

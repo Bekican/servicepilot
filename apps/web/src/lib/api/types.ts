@@ -11,6 +11,9 @@ export type User = ApiSchema["UserResponse"];
 export type Invitation = ApiSchema["UserInvitationResponse"];
 export type Technician = ApiSchema["TechnicianResponse"];
 export type DashboardSummary = ApiSchema["DashboardSummaryResponse"];
+export type CustomerPage = ApiSchema["PagedResponseOfCustomerResponse"];
+export type AppointmentPage = ApiSchema["PagedResponseOfAppointmentResponse"];
+export type ReminderPage = ApiSchema["PagedResponseOfReminderResponse"];
 export type ProblemDetails = ApiSchema["ProblemDetails"] & {
   code?: string;
   traceId?: string;

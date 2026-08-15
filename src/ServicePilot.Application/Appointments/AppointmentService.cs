@@ -214,6 +214,57 @@ public sealed partial class AppointmentService(
                     Map(appointment, canManage)).ToArray());
     }
 
+    public async Task<Result<PageResult<AppointmentResponse>>> ListPageAsync(
+        AppointmentFilterData filter,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        if (filter.FromUtc is DateTimeOffset fromUtc
+            && filter.ToUtc is DateTimeOffset toUtc
+            && toUtc <= fromUtc)
+        {
+            return Result<PageResult<AppointmentResponse>>.Failure(
+                AppointmentErrors.InvalidData);
+        }
+
+        AppointmentStatus? status = null;
+        if (!string.IsNullOrWhiteSpace(filter.Status)
+            && (!Enum.TryParse(filter.Status, true, out AppointmentStatus parsed)
+                || !Enum.IsDefined(parsed)))
+        {
+            return Result<PageResult<AppointmentResponse>>.Failure(
+                AppointmentErrors.InvalidData);
+        }
+        else if (!string.IsNullOrWhiteSpace(filter.Status))
+        {
+            status = Enum.Parse<AppointmentStatus>(filter.Status, true);
+        }
+
+        (page, pageSize) = PageResult<AppointmentResponse>.Normalize(page, pageSize);
+        Guid? technicianFilter = currentUser.Role == UserRoles.Technician
+            ? currentUser.UserId
+            : filter.TechnicianUserId;
+        (IReadOnlyList<AppointmentDetails> items, int totalCount) =
+            await appointmentRepository.ListDetailsPageAsync(
+                currentUser.OrganizationId,
+                new AppointmentQuery(
+                    filter.FromUtc?.ToUniversalTime(),
+                    filter.ToUtc?.ToUniversalTime(),
+                    status,
+                    technicianFilter),
+                (page - 1) * pageSize,
+                pageSize,
+                cancellationToken);
+        bool canManage = await CanManageAppointmentsAsync(cancellationToken);
+        return Result<PageResult<AppointmentResponse>>.Success(
+            new PageResult<AppointmentResponse>(
+                items.Select(item => Map(item, canManage)).ToArray(),
+                page,
+                pageSize,
+                totalCount));
+    }
+
     public async Task<Result<AppointmentResponse>>
         AssignAsync(
             Guid appointmentId,
@@ -489,6 +540,7 @@ public sealed partial class AppointmentService(
             appointment.CustomerId,
             appointment.CustomerNumber,
             appointment.CustomerDisplayName,
+            appointment.CustomerHasEmail,
             appointment.ServiceId,
             appointment.ServiceName,
             appointment.TechnicianUserId,

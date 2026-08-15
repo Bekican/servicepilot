@@ -1,12 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+
 using Npgsql;
+
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Appointments;
 using ServicePilot.Application.Auditing;
+using ServicePilot.Application.Authentication.PasswordReset;
 using ServicePilot.Application.Customers;
 using ServicePilot.Application.Dashboard;
 using ServicePilot.Application.Organizations;
@@ -47,6 +50,8 @@ public static class DependencyInjection
         AddDatabase(services, configuration);
         services.AddScoped<IAppointmentRepository,
             AppointmentRepository>();
+        services.AddScoped<IOrganizationRepository,
+            OrganizationRepository>();
         services.AddScoped<IReminderRepository,
             ReminderRepository>();
         services.AddScoped<IRetentionService,
@@ -76,6 +81,9 @@ public static class DependencyInjection
             UserRepository>();
         services.AddScoped<IUserInvitationRepository,
             UserInvitationRepository>();
+        services.AddScoped<IPasswordResetTokenRepository,
+            PasswordResetTokenRepository>();
+        services.AddScoped<PasswordResetService>();
         services.AddScoped<IAuditLogRepository,
             AuditLogRepository>();
         services.AddScoped<ICustomerNumberGenerator,
@@ -100,6 +108,8 @@ public static class DependencyInjection
             AspNetPasswordHasher>();
         services.AddSingleton<IAccessTokenProvider,
             JwtAccessTokenProvider>();
+        services.AddScoped<ISessionVersionValidator,
+            SessionVersionValidator>();
         services.AddSingleton<IInvitationTokenService,
             InvitationTokenService>();
         services.AddSingleton(
@@ -114,6 +124,8 @@ public static class DependencyInjection
                     configuration));
         services.AddSingleton<IInvitationLinkBuilder,
             InvitationLinkBuilder>();
+        services.AddSingleton<IPasswordResetLinkBuilder,
+            PasswordResetLinkBuilder>();
         return services;
     }
 

@@ -34,6 +34,8 @@ public sealed class ServicePilotDbContext(
     public DbSet<User> Users => Set<User>();
     public DbSet<UserInvitation> UserInvitations =>
         Set<UserInvitation>();
+    public DbSet<PasswordResetToken> PasswordResetTokens =>
+        Set<PasswordResetToken>();
     internal DbSet<CustomerNumberCounter>
         CustomerNumberCounters =>
             Set<CustomerNumberCounter>();

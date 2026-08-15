@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 
 using ServicePilot.Contracts.Authentication;
+using ServicePilot.Contracts.Common;
 using ServicePilot.Contracts.Customers;
 using ServicePilot.IntegrationTests.Infrastructure;
 
@@ -76,6 +77,17 @@ public sealed class CustomerApiTests
             item =>
                 item.Id == customer.Id
                 && !item.IsActive);
+
+        HttpResponseMessage activateResponse =
+            await SendAsync<object>(
+                HttpMethod.Post,
+                $"/api/customers/{customer.Id}/activate",
+                owner.AccessToken,
+                null);
+        Assert.Equal(HttpStatusCode.NoContent, activateResponse.StatusCode);
+
+        activeCustomers = await GetListAsync(owner.AccessToken, false);
+        Assert.Contains(activeCustomers, item => item.Id == customer.Id);
 
         int storedCount =
             await _factory.ExecuteDbContextAsync(
@@ -272,12 +284,12 @@ public sealed class CustomerApiTests
                 null);
         response.EnsureSuccessStatusCode();
 
-        CustomerResponse[]? customers =
+        PagedResponse<CustomerResponse>? customers =
             await response.Content.ReadFromJsonAsync<
-                CustomerResponse[]>();
+                PagedResponse<CustomerResponse>>();
 
-        return Assert.IsType<CustomerResponse[]>(
-            customers);
+        return Assert.IsType<PagedResponse<CustomerResponse>>(
+            customers).Items.ToArray();
     }
 
     private async Task<HttpResponseMessage> SendAsync<TBody>(

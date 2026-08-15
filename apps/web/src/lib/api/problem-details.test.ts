@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   problemMessage,
+  problemActionState,
   problemPresentation,
   problemSearchParams,
 } from "@/lib/api/problem-details";
@@ -49,5 +50,21 @@ describe("problemMessage", () => {
 
   it("falls back when the response has no problem body", () => {
     expect(problemMessage(undefined, "Tekrar deneyin")).toBe("Tekrar deneyin");
+  });
+
+  it("translates field error codes without exposing a general error", () => {
+    expect(
+      problemActionState({
+        code: "Validation.Failed",
+        errors: {
+          organizationSlug: ["InvalidSlug"],
+        },
+      }),
+    ).toMatchObject({
+      error: undefined,
+      fieldErrors: {
+        organizationSlug: expect.stringContaining("küçük harf"),
+      },
+    });
   });
 });

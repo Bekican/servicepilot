@@ -39,6 +39,33 @@ public sealed class ReminderManagementService(
         return reminders.Select(Map).ToArray();
     }
 
+    public async Task<PageResult<ReminderResponse>> ListPageAsync(
+        string? status,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        ReminderStatus? statusFilter = Enum.TryParse(
+            status, true, out ReminderStatus parsedStatus)
+            && Enum.IsDefined(parsedStatus)
+                ? parsedStatus
+                : null;
+        Guid? technicianFilter = currentUser.Role == UserRoles.Technician
+            ? currentUser.UserId
+            : null;
+        (page, pageSize) = PageResult<ReminderResponse>.Normalize(page, pageSize);
+        (IReadOnlyList<Reminder> items, int totalCount) =
+            await reminderRepository.ListPageAsync(
+                currentUser.OrganizationId,
+                technicianFilter,
+                statusFilter,
+                (page - 1) * pageSize,
+                pageSize,
+                cancellationToken);
+        return new PageResult<ReminderResponse>(
+            items.Select(Map).ToArray(), page, pageSize, totalCount);
+    }
+
     public async Task<Result<ReminderResponse>> RetryAsync(
         Guid reminderId,
         CancellationToken cancellationToken = default)

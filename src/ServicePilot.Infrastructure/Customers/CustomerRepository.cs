@@ -39,6 +39,43 @@ internal sealed class CustomerRepository(
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<(IReadOnlyList<Customer> Items, int TotalCount)> ListPageAsync(
+        Guid organizationId,
+        bool includeInactive,
+        string? search,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        string normalizedSearch = search?.Trim().ToLowerInvariant() ?? string.Empty;
+        IQueryable<Customer> query = dbContext.Customers
+            .AsNoTracking()
+            .Where(customer =>
+                customer.OrganizationId == organizationId
+                && (includeInactive || customer.IsActive));
+
+        if (normalizedSearch.Length > 0)
+        {
+            query = query.Where(customer =>
+                customer.Number.ToString().Contains(normalizedSearch.Replace("cus-", ""))
+                || (customer.FirstName != null
+                    && customer.FirstName.ToLower().Contains(normalizedSearch))
+                || (customer.LastName != null
+                    && customer.LastName.ToLower().Contains(normalizedSearch))
+                || (customer.CompanyName != null
+                    && customer.CompanyName.ToLower().Contains(normalizedSearch))
+                || (customer.NormalizedEmail != null
+                    && customer.NormalizedEmail.Contains(normalizedSearch)));
+        }
+
+        int totalCount = await query.CountAsync(cancellationToken);
+        Customer[] items = await query.OrderBy(customer => customer.Number)
+            .Skip(skip)
+            .Take(take)
+            .ToArrayAsync(cancellationToken);
+        return (items, totalCount);
+    }
+
     public Task<bool> EmailExistsAsync(
         Guid organizationId,
         string normalizedEmail,

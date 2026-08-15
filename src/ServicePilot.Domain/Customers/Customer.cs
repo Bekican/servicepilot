@@ -161,6 +161,12 @@ public sealed class Customer
         UpdatedAtUtc = updatedAtUtc;
     }
 
+    public void Activate(DateTimeOffset updatedAtUtc)
+    {
+        IsActive = true;
+        UpdatedAtUtc = updatedAtUtc;
+    }
+
     private void SetNames(
         CustomerType type,
         string? firstName,

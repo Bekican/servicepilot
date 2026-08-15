@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -35,7 +36,10 @@ internal sealed class JwtAccessTokenProvider(
                 user.OrganizationId.ToString()),
             new(
                 AuthenticationClaimNames.Role,
-                user.Role)
+                user.Role),
+            new(
+                AuthenticationClaimNames.SessionVersion,
+                user.SessionVersion.ToString(CultureInfo.InvariantCulture))
         ];
 
         SymmetricSecurityKey securityKey = new(

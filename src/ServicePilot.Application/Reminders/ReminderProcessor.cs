@@ -1,7 +1,11 @@
+using System.Globalization;
+
 using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Appointments;
+using ServicePilot.Application.Organizations;
 using ServicePilot.Domain.Appointments;
+using ServicePilot.Domain.Organizations;
 using ServicePilot.Domain.Reminders;
 
 namespace ServicePilot.Application.Reminders;
@@ -9,6 +13,7 @@ namespace ServicePilot.Application.Reminders;
 public sealed class ReminderProcessor(
     IReminderRepository reminderRepository,
     IAppointmentRepository appointmentRepository,
+    IOrganizationRepository organizationRepository,
     IEmailSender emailSender,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider)
@@ -47,12 +52,23 @@ public sealed class ReminderProcessor(
 
             try
             {
+                Organization? organization =
+                    await organizationRepository.GetByIdAsync(
+                        reminder.OrganizationId,
+                        cancellationToken);
+                TimeZoneInfo timeZone = TimeZoneInfo.FindSystemTimeZoneById(
+                    organization?.TimeZoneId ?? "UTC");
+                DateTimeOffset localStart = TimeZoneInfo.ConvertTime(
+                    appointment.StartAtUtc,
+                    timeZone);
+
                 await emailSender.SendAsync(
                     new EmailMessage(
                         reminder.RecipientEmail!,
-                        "ServicePilot appointment reminder",
-                        $"Your appointment starts at "
-                        + $"{appointment.StartAtUtc:O}."),
+                        "ServicePilot randevu hatırlatması",
+                        "Randevunuz "
+                        + localStart.ToString("dd.MM.yyyy HH:mm", CultureInfo.GetCultureInfo("tr-TR"))
+                        + $" tarihinde başlayacaktır ({timeZone.Id})."),
                     cancellationToken);
 
                 reminder.MarkSent(

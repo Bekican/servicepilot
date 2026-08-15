@@ -21,11 +21,13 @@ export default async function NewAppointmentPage({
   const client = await createServerApiClient();
   const [customersResult, servicesResult, techniciansResult] =
     await Promise.all([
-      client.GET("/api/customers"),
+      client.GET("/api/customers", {
+        params: { query: { page: 1, pageSize: 100 } },
+      }),
       client.GET("/api/services"),
       client.GET("/api/technicians"),
     ]);
-  const customers = (customersResult.data ?? []).filter(
+  const customers = (customersResult.data?.items ?? []).filter(
     (customer) => customer.isActive,
   ) as Customer[];
   const services = (servicesResult.data ?? []).filter(

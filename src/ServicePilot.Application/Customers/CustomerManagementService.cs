@@ -116,6 +116,29 @@ public sealed class CustomerManagementService(
             .ToArray();
     }
 
+    public async Task<PageResult<CustomerResponse>> ListPageAsync(
+        bool includeInactive,
+        string? search,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        (page, pageSize) = PageResult<CustomerResponse>.Normalize(page, pageSize);
+        (IReadOnlyList<Customer> items, int totalCount) =
+            await customerRepository.ListPageAsync(
+                tenantContext.OrganizationId,
+                includeInactive,
+                search,
+                (page - 1) * pageSize,
+                pageSize,
+                cancellationToken);
+        return new PageResult<CustomerResponse>(
+            items.Select(customer => Map(customer, [])).ToArray(),
+            page,
+            pageSize,
+            totalCount);
+    }
+
     public async Task<Result<CustomerResponse>> UpdateAsync(
         Guid customerId,
         CustomerData data,
@@ -214,6 +237,29 @@ public sealed class CustomerManagementService(
         return await SaveAsync(cancellationToken);
     }
 
+    public async Task<Result> ActivateAsync(
+        Guid customerId,
+        CancellationToken cancellationToken = default)
+    {
+        Customer? customer = await customerRepository.GetByIdAsync(
+            tenantContext.OrganizationId,
+            customerId,
+            cancellationToken);
+
+        if (customer is null)
+        {
+            return Result.Failure(CustomerErrors.NotFound);
+        }
+
+        if (!customer.IsActive)
+        {
+            customer.Activate(timeProvider.GetUtcNow());
+            return await SaveAsync(cancellationToken);
+        }
+
+        return Result.Success();
+    }
+
     public async Task<Result<CustomerAddressResponse>>
         AddAddressAsync(
             Guid customerId,
@@ -232,6 +278,10 @@ public sealed class CustomerManagementService(
             return Result<CustomerAddressResponse>.Failure(
                 CustomerErrors.NotFound);
         }
+
+        Error? addressError = ValidateAddress(data);
+        if (addressError is not null)
+            return Result<CustomerAddressResponse>.Failure(addressError);
 
         DateTimeOffset nowUtc = timeProvider.GetUtcNow();
         CustomerAddress address;
@@ -303,6 +353,10 @@ public sealed class CustomerManagementService(
                 CustomerErrors.AddressNotFound);
         }
 
+        Error? addressError = ValidateAddress(data);
+        if (addressError is not null)
+            return Result<CustomerAddressResponse>.Failure(addressError);
+
         DateTimeOffset nowUtc = timeProvider.GetUtcNow();
 
         try
@@ -372,6 +426,31 @@ public sealed class CustomerManagementService(
 
         address.Deactivate(timeProvider.GetUtcNow());
         return await SaveAsync(cancellationToken);
+    }
+
+    public async Task<Result> ActivateAddressAsync(
+        Guid customerId,
+        Guid addressId,
+        CancellationToken cancellationToken = default)
+    {
+        CustomerAddress? address = await customerRepository.GetAddressAsync(
+            tenantContext.OrganizationId,
+            customerId,
+            addressId,
+            cancellationToken);
+
+        if (address is null)
+        {
+            return Result.Failure(CustomerErrors.AddressNotFound);
+        }
+
+        if (!address.IsActive)
+        {
+            address.Activate(timeProvider.GetUtcNow());
+            return await SaveAsync(cancellationToken);
+        }
+
+        return Result.Success();
     }
 
     public async Task<Result<CustomerAddressResponse>>
@@ -488,29 +567,98 @@ public sealed class CustomerManagementService(
                 CustomerType,
                 string?,
                 string?)>.Failure(
-                    CustomerErrors.InvalidData);
+                    CustomerErrors.InvalidType);
         }
 
+        if (type == CustomerType.Individual
+            && string.IsNullOrWhiteSpace(data.FirstName))
+        {
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.FirstNameRequired);
+        }
+
+        if ((data.FirstName?.Trim().Length ?? 0) > Customer.MaxFirstNameLength)
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.FirstNameTooLong);
+        if ((data.LastName?.Trim().Length ?? 0) > Customer.MaxLastNameLength)
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.LastNameTooLong);
+        if ((data.CompanyName?.Trim().Length ?? 0) > Customer.MaxCompanyNameLength)
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.CompanyNameTooLong);
+        if ((data.ContactPerson?.Trim().Length ?? 0) > Customer.MaxContactPersonLength)
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.ContactPersonTooLong);
+        if ((data.Email?.Trim().Length ?? 0) > Customer.MaxEmailLength)
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.EmailTooLong);
+
+        if (type == CustomerType.Individual
+            && string.IsNullOrWhiteSpace(data.LastName))
+        {
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.LastNameRequired);
+        }
+
+        if (type == CustomerType.Company
+            && string.IsNullOrWhiteSpace(data.CompanyName))
+        {
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.CompanyNameRequired);
+        }
+
+        string? normalizedEmail;
         try
         {
-            return Result<(
-                CustomerType,
-                string?,
-                string?)>.Success((
-                    type,
-                    CustomerContactNormalizer
-                        .NormalizeEmail(data.Email),
-                    CustomerContactNormalizer
-                        .NormalizePhone(data.Phone)));
+            normalizedEmail = CustomerContactNormalizer.NormalizeEmail(data.Email);
         }
         catch (ArgumentException)
         {
-            return Result<(
-                CustomerType,
-                string?,
-                string?)>.Failure(
-                    CustomerErrors.InvalidData);
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.InvalidEmail);
         }
+
+        string? normalizedPhone;
+        try
+        {
+            normalizedPhone = CustomerContactNormalizer.NormalizePhone(data.Phone);
+        }
+        catch (ArgumentException)
+        {
+            return Result<(CustomerType, string?, string?)>.Failure(
+                CustomerErrors.InvalidPhone);
+        }
+
+        return Result<(CustomerType, string?, string?)>.Success((
+            type,
+            normalizedEmail,
+            normalizedPhone));
+    }
+
+    private static Error? ValidateAddress(AddressData data)
+    {
+        if (string.IsNullOrWhiteSpace(data.Line1))
+            return CustomerErrors.AddressField("line1", "Required");
+        if (data.Line1.Trim().Length > CustomerAddress.MaxLineLength)
+            return CustomerErrors.AddressField("line1", "TooLong");
+        if ((data.Line2?.Trim().Length ?? 0) > CustomerAddress.MaxLineLength)
+            return CustomerErrors.AddressField("line2", "TooLong");
+        if ((data.Label?.Trim().Length ?? 0) > CustomerAddress.MaxLabelLength)
+            return CustomerErrors.AddressField("label", "TooLong");
+        if (string.IsNullOrWhiteSpace(data.City))
+            return CustomerErrors.AddressField("city", "Required");
+        if (data.City.Trim().Length > CustomerAddress.MaxCityLength)
+            return CustomerErrors.AddressField("city", "TooLong");
+        if ((data.Region?.Trim().Length ?? 0) > CustomerAddress.MaxRegionLength)
+            return CustomerErrors.AddressField("region", "TooLong");
+        if ((data.PostalCode?.Trim().Length ?? 0) > CustomerAddress.MaxPostalCodeLength)
+            return CustomerErrors.AddressField("postalCode", "TooLong");
+        string countryCode = data.CountryCode?.Trim() ?? string.Empty;
+        if (countryCode.Length != CustomerAddress.CountryCodeLength
+            || !countryCode.All(char.IsAsciiLetter))
+            return CustomerErrors.AddressField("countryCode", "Invalid");
+
+        return null;
     }
 
     private static Customer CreateCustomer(

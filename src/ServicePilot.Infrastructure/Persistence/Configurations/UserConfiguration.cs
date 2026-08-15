@@ -61,6 +61,11 @@ internal sealed class UserConfiguration
             .HasColumnName("created_at_utc")
             .IsRequired();
 
+        builder.Property(user => user.SessionVersion)
+            .HasColumnName("session_version")
+            .HasDefaultValue(0)
+            .IsRequired();
+
         builder.HasIndex(user => new
         {
             user.OrganizationId,

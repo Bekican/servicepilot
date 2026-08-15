@@ -14,6 +14,14 @@ public interface ICustomerRepository
         bool includeInactive,
         CancellationToken cancellationToken = default);
 
+    Task<(IReadOnlyList<Customer> Items, int TotalCount)> ListPageAsync(
+        Guid organizationId,
+        bool includeInactive,
+        string? search,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
     Task<bool> EmailExistsAsync(
         Guid organizationId,
         string normalizedEmail,

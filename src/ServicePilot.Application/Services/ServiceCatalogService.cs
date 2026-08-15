@@ -19,6 +19,10 @@ public sealed class ServiceCatalogService(
         string name = data.Name?.Trim() ?? string.Empty;
         string normalizedName = name.ToLowerInvariant();
 
+        Error? validationError = Validate(data, name);
+        if (validationError is not null)
+            return Result<ServiceCatalogResponse>.Failure(validationError);
+
         if (await repository.NameExistsAsync(
             tenantContext.OrganizationId,
             normalizedName,
@@ -108,6 +112,10 @@ public sealed class ServiceCatalogService(
         string name = data.Name?.Trim() ?? string.Empty;
         string normalizedName = name.ToLowerInvariant();
 
+        Error? validationError = Validate(data, name);
+        if (validationError is not null)
+            return Result<ServiceCatalogResponse>.Failure(validationError);
+
         if (await repository.NameExistsAsync(
             tenantContext.OrganizationId,
             normalizedName,
@@ -189,6 +197,19 @@ public sealed class ServiceCatalogService(
             return Result.Failure(
                 ServiceCatalogErrors.NameAlreadyExists);
         }
+    }
+
+    private static Error? Validate(ServiceCatalogData data, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)
+            || name.Length > ServiceCatalogItem.MaxNameLength)
+            return ServiceCatalogErrors.InvalidName;
+
+        if (data.DefaultDurationMinutes is < ServiceCatalogItem.MinDurationMinutes
+            or > ServiceCatalogItem.MaxDurationMinutes)
+            return ServiceCatalogErrors.InvalidDuration;
+
+        return null;
     }
 
     private static ServiceCatalogResponse Map(

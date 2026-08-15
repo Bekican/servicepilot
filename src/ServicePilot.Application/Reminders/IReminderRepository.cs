@@ -20,6 +20,14 @@ public interface IReminderRepository
         ReminderStatus? status,
         CancellationToken cancellationToken = default);
 
+    Task<(IReadOnlyList<Reminder> Items, int TotalCount)> ListPageAsync(
+        Guid organizationId,
+        Guid? technicianUserId,
+        ReminderStatus? status,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Reminder>> ClaimDueAsync(
         DateTimeOffset nowUtc,
         DateTimeOffset staleBeforeUtc,

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Clock3 } from "lucide-react";
 
 import { FormError } from "@/components/shared/form-error";
+import { FieldError } from "@/components/shared/field-error";
 import { PendingButton } from "@/components/shared/pending-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,12 +58,17 @@ export function ServiceForm({
       <div className="space-y-2">
         <Label htmlFor={`name-${idSuffix}`}>Hizmet adı</Label>
         <Input
+          aria-invalid={Boolean(state.fieldErrors?.name)}
           defaultValue={state.values?.name ?? defaultName}
           disabled={disabled}
           id={`name-${idSuffix}`}
           name="name"
           placeholder={mode === "create" ? "Kombi Bakımı" : undefined}
           required
+        />
+        <FieldError
+          id={`name-${idSuffix}-error`}
+          message={state.fieldErrors?.name}
         />
       </div>
       <div className="space-y-2">
@@ -77,6 +83,7 @@ export function ServiceForm({
             />
           ) : null}
           <Input
+            aria-invalid={Boolean(state.fieldErrors?.defaultDurationMinutes)}
             className={mode === "create" ? "pl-9" : undefined}
             defaultValue={
               state.values?.defaultDurationMinutes ?? defaultDurationMinutes
@@ -89,6 +96,10 @@ export function ServiceForm({
             type="number"
           />
         </div>
+        <FieldError
+          id={`duration-${idSuffix}-error`}
+          message={state.fieldErrors?.defaultDurationMinutes}
+        />
       </div>
       <PendingButton
         className={mode === "create" ? "w-full" : undefined}

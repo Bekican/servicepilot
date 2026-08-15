@@ -4,21 +4,21 @@ namespace ServicePilot.Application.Users.Invitations;
 
 public static class InvitationErrors
 {
-    public static readonly Error EmailIsRequired = new(
+    public static readonly Error EmailIsRequired = Error.ForField(
         "Invitation.EmailIsRequired",
-        "Invitation email is required");
+        "Invitation email is required", "email", "Required");
 
-    public static readonly Error InvalidEmail = new(
+    public static readonly Error InvalidEmail = Error.ForField(
         "Invitation.InvalidEmail",
-        "Invitation email is invalid");
+        "Invitation email is invalid", "email", "InvalidEmail");
 
-    public static readonly Error EmailTooLong = new(
+    public static readonly Error EmailTooLong = Error.ForField(
         "Invitation.EmailTooLong",
-        "Invitation email is too long");
+        "Invitation email is too long", "email", "TooLong");
 
-    public static readonly Error InvalidRole = new(
+    public static readonly Error InvalidRole = Error.ForField(
         "Invitation.InvalidRole",
-        "Invitation role is not supported");
+        "Invitation role is not supported", "role", "Invalid");
 
     public static readonly Error UserAlreadyExists = new(
         "Invitation.UserAlreadyExists",

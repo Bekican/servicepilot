@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { CalendarClock } from "lucide-react";
 
 import { FormError } from "@/components/shared/form-error";
+import { FieldError } from "@/components/shared/field-error";
 import { PendingButton } from "@/components/shared/pending-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Customer, Service, Technician } from "@/lib/api/types";
-import { zonedLocalDateTimeToIso } from "@/lib/date";
+import { localDateTimeValue, zonedLocalDateTimeToIso } from "@/lib/date";
 import { initialActionState } from "@/lib/action-state";
 
 import { createAppointmentAction } from "./actions";
@@ -20,11 +21,10 @@ function customerName(customer: Customer) {
     : `${customer.firstName ?? ""} ${customer.lastName ?? ""}`.trim();
 }
 
-function initialDateTime() {
+function initialDateTime(timeZone: string) {
   const value = new Date(Date.now() + 60 * 60 * 1000);
   value.setMinutes(Math.ceil(value.getMinutes() / 15) * 15, 0, 0);
-  const offset = value.getTimezoneOffset() * 60_000;
-  return new Date(value.getTime() - offset).toISOString().slice(0, 16);
+  return localDateTimeValue(value, timeZone);
 }
 
 export function AppointmentForm({
@@ -47,8 +47,16 @@ export function AppointmentForm({
   useEffect(() => {
     if (state.redirectTo) router.push(state.redirectTo);
   }, [router, state.redirectTo]);
-  const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
-  const [startLocal, setStartLocal] = useState(initialDateTime);
+  const [customerId, setCustomerId] = useState(
+    state.values?.customerId ?? customers[0]?.id ?? "",
+  );
+  const [serviceId, setServiceId] = useState(
+    state.values?.serviceId ?? services[0]?.id ?? "",
+  );
+  const [startLocal, setStartLocal] = useState(
+    state.values?.startLocal ?? initialDateTime(timeZone),
+  );
+  const customer = customers.find((item) => item.id === customerId);
   const service = services.find((item) => item.id === serviceId);
   const duration = Number(service?.defaultDurationMinutes ?? 60);
   const instants = useMemo(() => {
@@ -83,10 +91,11 @@ export function AppointmentForm({
         <Label htmlFor="customerId">Müşteri</Label>
         <select
           className="bg-background h-10 w-full rounded-md border px-3 text-sm"
-          defaultValue={state.values?.customerId ?? customers[0]?.id}
           id="customerId"
           name="customerId"
+          onChange={(event) => setCustomerId(event.target.value)}
           required
+          value={customerId}
         >
           {customers.map((customer) => (
             <option key={customer.id} value={customer.id}>
@@ -100,7 +109,6 @@ export function AppointmentForm({
         <Label htmlFor="serviceId">Hizmet</Label>
         <select
           className="bg-background h-10 w-full rounded-md border px-3 text-sm"
-          defaultValue={state.values?.technicianUserId ?? ""}
           id="serviceId"
           name="serviceId"
           onChange={(event) => setServiceId(event.target.value)}
@@ -118,12 +126,18 @@ export function AppointmentForm({
       <div className="space-y-2">
         <Label htmlFor="startLocal">Başlangıç</Label>
         <Input
+          aria-invalid={Boolean(state.fieldErrors?.startAt)}
           id="startLocal"
-          min={new Date().toISOString().slice(0, 16)}
+          min={localDateTimeValue(new Date(), timeZone)}
+          name="startLocal"
           onChange={(event) => setStartLocal(event.target.value)}
           required
           type="datetime-local"
           value={startLocal}
+        />
+        <FieldError
+          id="startAt-error"
+          message={state.fieldErrors?.startAt ?? state.fieldErrors?.endAt}
         />
         <p className="text-muted-foreground text-xs">
           Saat dilimi: {timeZone}. Bitiş, hizmet süresine göre otomatik
@@ -131,12 +145,20 @@ export function AppointmentForm({
         </p>
       </div>
 
+      {customer && !customer.email ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Bu müşterinin e-posta adresi yok. Randevu oluşturulur ancak e-posta
+          hatırlatması gönderilmez.
+        </p>
+      ) : null}
+
       <div className="space-y-2">
         <Label htmlFor="technicianUserId">Teknisyen (opsiyonel)</Label>
         <select
           className="bg-background h-10 w-full rounded-md border px-3 text-sm"
           id="technicianUserId"
           name="technicianUserId"
+          defaultValue={state.values?.technicianUserId ?? ""}
         >
           <option value="">Daha sonra ata</option>
           {technicians.map((technician) => (

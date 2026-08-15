@@ -24,8 +24,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createServerApiClient } from "@/lib/api/server-client";
-import type { Appointment, DashboardSummary, Reminder } from "@/lib/api/types";
-import { dateKey, formatDate, formatTime } from "@/lib/date";
+import type {
+  AppointmentPage,
+  DashboardSummary,
+  ReminderPage,
+} from "@/lib/api/types";
+import {
+  dateKey,
+  formatDate,
+  formatTime,
+  zonedLocalDateTimeToIso,
+} from "@/lib/date";
 import { requireSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Genel Bakış" };
@@ -35,27 +44,38 @@ const asNumber = (value: number | string) => Number(value);
 export default async function DashboardPage() {
   const session = await requireSession();
   const client = await createServerApiClient();
+  const today = dateKey(new Date().toISOString(), session.timeZoneId);
+  const tomorrow = new Date(`${today}T12:00:00Z`);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const from = zonedLocalDateTimeToIso(`${today}T00:00`, session.timeZoneId);
+  const to = zonedLocalDateTimeToIso(
+    `${tomorrow.toISOString().slice(0, 10)}T00:00`,
+    session.timeZoneId,
+  );
   const [summaryResult, appointmentsResult, remindersResult] =
     await Promise.all([
       client.GET("/api/dashboard/summary"),
-      client.GET("/api/appointments"),
+      client.GET("/api/appointments", {
+        params: { query: { from, to, page: 1, pageSize: 100 } },
+      }),
       client.GET("/api/reminders", {
-        params: { query: { status: "Failed" } },
+        params: { query: { status: "Failed", page: 1, pageSize: 2 } },
       }),
     ]);
 
   const summary = summaryResult.data as DashboardSummary | undefined;
-  const appointments = (appointmentsResult.data ?? []) as Appointment[];
-  const failedReminders = (remindersResult.data ?? []) as Reminder[];
 
   if (!summary) {
     throw new Error("Dashboard özeti alınamadı.");
   }
 
-  const todayAppointments = appointments.filter(
-    (appointment) =>
-      dateKey(appointment.startAtUtc, summary.timeZoneId) === summary.date,
-  );
+  const appointmentsPage = appointmentsResult.data as
+    AppointmentPage | undefined;
+  const failedRemindersPage = remindersResult.data as ReminderPage | undefined;
+  const appointments = appointmentsPage?.items ?? [];
+  const failedReminders = failedRemindersPage?.items ?? [];
+
+  const todayAppointments = appointments;
   const unassigned = todayAppointments.filter(
     (appointment) =>
       !appointment.technicianUserId &&

@@ -9,7 +9,12 @@ public static class AppointmentErrors
         "Appointment was not found");
     public static readonly Error InvalidData = new(
         "Appointment.InvalidData",
-        "Appointment data is invalid");
+        "Appointment data is invalid",
+        new Dictionary<string, string[]>
+        {
+            ["startAt"] = ["Invalid"],
+            ["endAt"] = ["Invalid"]
+        });
     public static readonly Error CustomerUnavailable = new(
         "Appointment.CustomerUnavailable",
         "Customer is not active or was not found");

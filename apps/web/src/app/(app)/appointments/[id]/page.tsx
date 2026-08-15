@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CalendarClock, Clock3, UserRound, Wrench } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  Clock3,
+  UserRound,
+  Wrench,
+} from "lucide-react";
 
 import { ActionMessage } from "@/components/shared/action-message";
 import { ConfirmAction } from "@/components/shared/confirm-action";
@@ -56,6 +62,15 @@ export default async function AppointmentDetailPage({
         success={query.success}
         supportCode={query.supportCode}
       />
+      {!appointment.customerHasEmail ? (
+        <div className="mb-5 flex gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <p>
+            Bu müşterinin e-posta adresi yok. Randevu kaydedilir ancak e-posta
+            hatırlatması gönderilmez.
+          </p>
+        </div>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_380px]">
         <Card>

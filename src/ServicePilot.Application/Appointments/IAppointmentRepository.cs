@@ -20,6 +20,14 @@ public interface IAppointmentRepository
         AppointmentQuery query,
         CancellationToken cancellationToken = default);
 
+    Task<(IReadOnlyList<AppointmentDetails> Items, int TotalCount)>
+        ListDetailsPageAsync(
+        Guid organizationId,
+        AppointmentQuery query,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
+
     Task<bool> HasTechnicianOverlapAsync(
         Guid organizationId,
         Guid technicianUserId,

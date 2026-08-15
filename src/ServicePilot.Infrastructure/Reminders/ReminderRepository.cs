@@ -64,6 +64,33 @@ internal sealed class ReminderRepository(
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<(IReadOnlyList<Reminder> Items, int TotalCount)> ListPageAsync(
+        Guid organizationId,
+        Guid? technicianUserId,
+        ReminderStatus? status,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<Reminder> query = dbContext.Reminders
+            .AsNoTracking()
+            .Where(reminder =>
+                reminder.OrganizationId == organizationId
+                && (status == null || reminder.Status == status)
+                && (technicianUserId == null
+                    || dbContext.Appointments.Any(appointment =>
+                        appointment.OrganizationId == organizationId
+                        && appointment.Id == reminder.AppointmentId
+                        && appointment.TechnicianUserId == technicianUserId)));
+        int totalCount = await query.CountAsync(cancellationToken);
+        Reminder[] items = await query
+            .OrderByDescending(reminder => reminder.UpdatedAtUtc)
+            .Skip(skip)
+            .Take(take)
+            .ToArrayAsync(cancellationToken);
+        return (items, totalCount);
+    }
+
     public async Task<IReadOnlyList<Reminder>> ClaimDueAsync(
         DateTimeOffset nowUtc,
         DateTimeOffset staleBeforeUtc,

@@ -103,6 +103,13 @@ public sealed class CustomerAddress
         UpdatedAtUtc = updatedAtUtc;
     }
 
+    public void Activate(DateTimeOffset updatedAtUtc)
+    {
+        IsActive = true;
+        IsPrimary = false;
+        UpdatedAtUtc = updatedAtUtc;
+    }
+
     private void SetDetails(
         string? label,
         string line1,

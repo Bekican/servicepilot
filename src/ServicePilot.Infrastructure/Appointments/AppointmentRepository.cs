@@ -52,6 +52,26 @@ internal sealed class AppointmentRepository(
             .ToArrayAsync(cancellationToken);
     }
 
+    public async Task<(IReadOnlyList<AppointmentDetails> Items, int TotalCount)>
+        ListDetailsPageAsync(
+        Guid organizationId,
+        AppointmentQuery query,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<AppointmentDetails> details = BuildDetailsQuery(
+            organizationId,
+            null,
+            query);
+        int totalCount = await details.CountAsync(cancellationToken);
+        AppointmentDetails[] items = await details
+            .Skip(skip)
+            .Take(take)
+            .ToArrayAsync(cancellationToken);
+        return (items, totalCount);
+    }
+
     public Task<bool> HasTechnicianOverlapAsync(
         Guid organizationId,
         Guid technicianUserId,
@@ -145,6 +165,7 @@ internal sealed class AppointmentRepository(
                     : customer.FirstName
                         + " "
                         + customer.LastName,
+                customer.Email != null,
                 service.Id,
                 service.Name,
                 appointment.TechnicianUserId,

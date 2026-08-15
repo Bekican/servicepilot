@@ -5,6 +5,7 @@ using ServicePilot.Api.Authentication;
 using ServicePilot.Api.Errors;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Reminders;
+using ServicePilot.Contracts.Common;
 
 using ContractResponse =
     ServicePilot.Contracts.Reminders.ReminderResponse;
@@ -21,16 +22,20 @@ public sealed class RemindersController(
 {
     [HttpGet]
     public async Task<ActionResult<
-        IReadOnlyList<ContractResponse>>> List(
+        PagedResponse<ContractResponse>>> List(
         [FromQuery] string? status,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        IReadOnlyList<ReminderResponse> reminders =
-            await service.ListAsync(
-                status,
-                cancellationToken);
-
-        return Ok(reminders.Select(Map));
+        PageResult<ReminderResponse> result = await service.ListPageAsync(
+            status, page, pageSize, cancellationToken);
+        return Ok(new PagedResponse<ContractResponse>(
+            result.Items.Select(Map).ToArray(),
+            result.Page,
+            result.PageSize,
+            result.TotalCount,
+            result.TotalPages));
     }
 
     [HttpPost("{id:guid}/retry")]

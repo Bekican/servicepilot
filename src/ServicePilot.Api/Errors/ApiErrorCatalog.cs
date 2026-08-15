@@ -1,5 +1,6 @@
 using ServicePilot.Application.Appointments;
 using ServicePilot.Application.Authentication;
+using ServicePilot.Application.Authentication.PasswordReset;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Customers;
 using ServicePilot.Application.Organizations;
@@ -59,6 +60,10 @@ public static class ApiErrorCatalog
             AuthenticationErrors.InvalidCredentials);
         Add(
             descriptors,
+            StatusCodes.Status400BadRequest,
+            PasswordResetErrors.InvalidOrExpired);
+        Add(
+            descriptors,
             StatusCodes.Status409Conflict,
             AuthenticationErrors.OrganizationSlugAlreadyExists,
             AuthenticationErrors.EmailAlreadyExists);
@@ -78,6 +83,20 @@ public static class ApiErrorCatalog
             descriptors,
             StatusCodes.Status400BadRequest,
             CustomerErrors.InvalidData);
+        Add(
+            descriptors,
+            StatusCodes.Status400BadRequest,
+            CustomerErrors.FirstNameRequired,
+            CustomerErrors.LastNameRequired,
+            CustomerErrors.CompanyNameRequired,
+            CustomerErrors.InvalidType,
+            CustomerErrors.FirstNameTooLong,
+            CustomerErrors.LastNameTooLong,
+            CustomerErrors.CompanyNameTooLong,
+            CustomerErrors.ContactPersonTooLong,
+            CustomerErrors.EmailTooLong,
+            CustomerErrors.InvalidEmail,
+            CustomerErrors.InvalidPhone);
 
         Add(
             descriptors,
@@ -90,7 +109,9 @@ public static class ApiErrorCatalog
         Add(
             descriptors,
             StatusCodes.Status400BadRequest,
-            ServiceCatalogErrors.InvalidData);
+            ServiceCatalogErrors.InvalidData,
+            ServiceCatalogErrors.InvalidName,
+            ServiceCatalogErrors.InvalidDuration);
 
         Add(
             descriptors,

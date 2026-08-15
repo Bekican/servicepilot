@@ -31,6 +31,29 @@ const translatedMessages: Record<string, string> = {
   "User.LastActiveOwner": "Son aktif Owner pasifleştirilemez.",
 };
 
+const translatedFieldErrors: Record<string, string> = {
+  Required: "Bu alan zorunludur.",
+  Invalid: "Bu alan geçerli değil.",
+  InvalidEmail: "Geçerli bir e-posta adresi yazın.",
+  InvalidPhone: "0555… veya +90555… biçiminde bir telefon yazın.",
+  InvalidSlug: "Yalnız küçük harf, rakam ve isteğe bağlı tire kullanın.",
+  TooShort: "Girilen değer çok kısa.",
+  TooLong: "Girilen değer çok uzun.",
+};
+
+function fieldErrors(problem: ProblemDetails | undefined) {
+  if (!problem?.errors) return undefined;
+
+  return Object.fromEntries(
+    Object.entries(problem.errors).flatMap(([field, codes]) => {
+      const code = codes[0];
+      return code
+        ? [[field, translatedFieldErrors[code] ?? "Bu alanı kontrol edin."]]
+        : [];
+    }),
+  );
+}
+
 export function problemMessage(
   problem: ProblemDetails | undefined,
   fallback = "İşlem tamamlanamadı. Lütfen tekrar deneyin.",
@@ -66,7 +89,8 @@ export function problemActionState(
 ) {
   const presentation = problemPresentation(problem, fallback);
   return {
-    error: presentation.message,
+    error: problem?.errors ? undefined : presentation.message,
+    fieldErrors: fieldErrors(problem),
     supportCode: presentation.supportCode,
   };
 }

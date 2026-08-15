@@ -76,8 +76,24 @@ public sealed class CustomerTests
                 "Bekir",
                 "Çakmak",
                 null,
-                "0555 111 22 33",
+                "555 111 22 33",
                 UtcNow));
+    }
+
+    [Fact]
+    public void Create_ShouldNormalizeLocalTurkeyPhoneToE164()
+    {
+        Customer customer = Customer.CreateIndividual(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            1,
+            "Bekir",
+            "Çakmak",
+            null,
+            "0555 111 22 33",
+            UtcNow);
+
+        Assert.Equal("+905551112233", customer.NormalizedPhone);
     }
 
     [Fact]
@@ -102,5 +118,10 @@ public sealed class CustomerTests
         Assert.False(address.IsActive);
         Assert.False(address.IsPrimary);
         Assert.Equal("TR", address.CountryCode);
+
+        address.Activate(UtcNow.AddMinutes(2));
+
+        Assert.True(address.IsActive);
+        Assert.False(address.IsPrimary);
     }
 }

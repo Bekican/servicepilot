@@ -4,7 +4,12 @@ import { AuthForm } from "@/features/auth/auth-form";
 
 export const metadata: Metadata = { title: "Giriş" };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ success?: string }>;
+}) {
+  const { success } = await searchParams;
   return (
     <div className="bg-card w-full max-w-md rounded-2xl border p-7 shadow-sm sm:p-9">
       <div className="mb-8 space-y-2">
@@ -16,6 +21,11 @@ export default function LoginPage() {
           Organizasyon adresiniz ve kullanıcı bilgilerinizle devam edin.
         </p>
       </div>
+      {success ? (
+        <p className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          {success}
+        </p>
+      ) : null}
       <AuthForm mode="login" />
     </div>
   );

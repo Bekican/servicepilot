@@ -119,6 +119,7 @@ public sealed class User
     public string Role { get; private set; } = string.Empty;
     public bool IsActive { get; private set; }
     public DateTimeOffset CreatedAtUtc { get; private set; }
+    public int SessionVersion { get; private set; }
 
     public void Deactivate()
     {
@@ -140,5 +141,17 @@ public sealed class User
         }
 
         Role = role;
+    }
+
+    public void ChangePassword(string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash)
+            || passwordHash.Length > MaxPasswordHashLength)
+        {
+            throw new ArgumentException("Password hash is invalid", nameof(passwordHash));
+        }
+
+        PasswordHash = passwordHash;
+        SessionVersion++;
     }
 }

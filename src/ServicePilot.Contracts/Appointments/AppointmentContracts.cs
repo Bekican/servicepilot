@@ -18,6 +18,7 @@ public sealed record AppointmentResponse(
     Guid CustomerId,
     string CustomerNumber,
     string CustomerDisplayName,
+    bool CustomerHasEmail,
     Guid ServiceId,
     string ServiceName,
     Guid? TechnicianUserId,

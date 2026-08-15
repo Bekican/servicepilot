@@ -109,6 +109,26 @@ export async function deactivateCustomerAction(id: string) {
   );
 }
 
+export async function activateCustomerAction(id: string) {
+  const client = await createServerApiClient();
+  const { response, error } = await client.POST(
+    "/api/customers/{id}/activate",
+    {
+      params: { path: { id } },
+    },
+  );
+
+  if (!response.ok) {
+    redirect(`/customers/${id}?${problemSearchParams(error)}`);
+  }
+
+  revalidatePath("/customers");
+  revalidatePath(`/customers/${id}`);
+  redirect(
+    `/customers/${id}?success=${encodeURIComponent("Müşteri yeniden etkinleştirildi")}`,
+  );
+}
+
 export async function addAddressAction(
   customerId: string,
   _state: ActionState,
@@ -174,4 +194,24 @@ export async function deactivateAddressAction(
   }
 
   revalidatePath(`/customers/${customerId}`);
+}
+
+export async function activateAddressAction(
+  customerId: string,
+  addressId: string,
+) {
+  const client = await createServerApiClient();
+  const { response, error } = await client.POST(
+    "/api/customers/{customerId}/addresses/{addressId}/activate",
+    { params: { path: { customerId, addressId } } },
+  );
+
+  if (!response.ok) {
+    redirect(`/customers/${customerId}?${problemSearchParams(error)}`);
+  }
+
+  revalidatePath(`/customers/${customerId}`);
+  redirect(
+    `/customers/${customerId}?success=${encodeURIComponent("Adres yeniden etkinleştirildi")}`,
+  );
 }

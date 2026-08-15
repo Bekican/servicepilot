@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { PaginationNav } from "@/components/shared/pagination-nav";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,8 +18,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createServerApiClient } from "@/lib/api/server-client";
-import type { Appointment, Technician } from "@/lib/api/types";
-import { formatDate, formatTime } from "@/lib/date";
+import type { AppointmentPage, Technician } from "@/lib/api/types";
+import {
+  dateKey,
+  formatDate,
+  formatTime,
+  zonedLocalDateTimeToIso,
+} from "@/lib/date";
 import { requireSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Randevular" };
@@ -30,18 +36,36 @@ export default async function AppointmentsPage({
     date?: string;
     status?: string;
     technicianId?: string;
+    page?: string;
   }>;
 }) {
   const query = await searchParams;
   const session = await requireSession();
   const client = await createServerApiClient();
   const canManage = session.capabilities.includes("ManageAppointments");
+  const page = Math.max(1, Number(query.page) || 1);
+  const today = dateKey(new Date().toISOString(), session.timeZoneId);
+  const from = query.date
+    ? zonedLocalDateTimeToIso(`${query.date}T00:00`, session.timeZoneId)
+    : zonedLocalDateTimeToIso(`${today}T00:00`, session.timeZoneId);
+  const nextDate = query.date ? new Date(`${query.date}T12:00:00Z`) : null;
+  nextDate?.setUTCDate(nextDate.getUTCDate() + 1);
+  const dayAfter = nextDate
+    ? zonedLocalDateTimeToIso(
+        nextDate.toISOString().slice(0, 10) + "T00:00",
+        session.timeZoneId,
+      )
+    : undefined;
   const [appointmentsResult, techniciansResult] = await Promise.all([
     client.GET("/api/appointments", {
       params: {
         query: {
           status: query.status || undefined,
           technicianId: query.technicianId || undefined,
+          from,
+          to: dayAfter,
+          page,
+          pageSize: 20,
         },
       },
     }),
@@ -49,18 +73,9 @@ export default async function AppointmentsPage({
       ? client.GET("/api/technicians")
       : Promise.resolve({ data: [] as Technician[] }),
   ]);
-  let appointments = (appointmentsResult.data ?? []) as Appointment[];
-  if (query.date) {
-    appointments = appointments.filter(
-      (appointment) =>
-        new Intl.DateTimeFormat("en-CA", {
-          timeZone: session.timeZoneId,
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        }).format(new Date(appointment.startAtUtc)) === query.date,
-    );
-  }
+  const appointmentPage = appointmentsResult.data as
+    AppointmentPage | undefined;
+  const appointments = appointmentPage?.items ?? [];
   const technicians = (techniciansResult.data ?? []) as Technician[];
 
   return (
@@ -165,6 +180,13 @@ export default async function AppointmentsPage({
           title="Randevu bulunamadı"
         />
       )}
+      <PaginationNav
+        label="Randevu sayfaları"
+        page={page}
+        pathname="/appointments"
+        query={query}
+        totalPages={Number(appointmentPage?.totalPages ?? 0)}
+      />
     </>
   );
 }

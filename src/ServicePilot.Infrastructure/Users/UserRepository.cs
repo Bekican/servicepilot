@@ -16,7 +16,6 @@ internal sealed class UserRepository(
         CancellationToken cancellationToken = default)
     {
         return dbContext.Users
-            .AsNoTracking()
             .SingleOrDefaultAsync(
                 user =>
                     user.OrganizationId == organizationId

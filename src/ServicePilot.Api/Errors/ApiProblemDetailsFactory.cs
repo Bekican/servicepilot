@@ -21,6 +21,19 @@ public sealed class ApiProblemDetailsFactory(
         HttpContext httpContext,
         Error error)
     {
+        if (error.FieldErrors is { Count: > 0 })
+        {
+            ValidationProblemDetails validation =
+                CreateValidation(httpContext, error.FieldErrors);
+            ObjectResult validationResult = new(validation)
+            {
+                StatusCode = StatusCodes.Status400BadRequest
+            };
+            validationResult.ContentTypes.Add(
+                "application/problem+json");
+            return validationResult;
+        }
+
         ApiProblemDescriptor descriptor;
         if (!ApiErrorCatalog.TryResolve(
                 error,

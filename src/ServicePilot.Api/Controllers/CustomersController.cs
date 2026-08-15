@@ -5,6 +5,7 @@ using ServicePilot.Api.Authentication;
 using ServicePilot.Api.Errors;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Customers;
+using ServicePilot.Contracts.Common;
 using ServicePilot.Contracts.Customers;
 
 using ApplicationAddressResponse =
@@ -50,16 +51,27 @@ public sealed class CustomersController(
 
     [HttpGet]
     public async Task<ActionResult<
-        IReadOnlyList<ContractCustomerResponse>>> List(
+        PagedResponse<ContractCustomerResponse>>> List(
         [FromQuery] bool includeInactive,
-        CancellationToken cancellationToken)
+        [FromQuery] string? search,
+        CancellationToken cancellationToken,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
-        IReadOnlyList<ApplicationCustomerResponse> customers =
-            await service.ListAsync(
+        PageResult<ApplicationCustomerResponse> result =
+            await service.ListPageAsync(
                 includeInactive,
+                search,
+                page,
+                pageSize,
                 cancellationToken);
 
-        return Ok(customers.Select(Map));
+        return Ok(new PagedResponse<ContractCustomerResponse>(
+            result.Items.Select(Map).ToArray(),
+            result.Page,
+            result.PageSize,
+            result.TotalCount,
+            result.TotalPages));
     }
 
     [HttpGet("{id:guid}")]
@@ -115,6 +127,16 @@ public sealed class CustomersController(
         return result.IsSuccess
             ? NoContent()
             : ToProblem(result.Error);
+    }
+
+    [HttpPost("{id:guid}/activate")]
+    [Authorize(Policy = AuthorizationPolicies.CustomerWrite)]
+    public async Task<IActionResult> Activate(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        Result result = await service.ActivateAsync(id, cancellationToken);
+        return result.IsSuccess ? NoContent() : ToProblem(result.Error);
     }
 
     [HttpPost("{customerId:guid}/addresses")]
@@ -184,6 +206,21 @@ public sealed class CustomersController(
         return result.IsSuccess
             ? NoContent()
             : ToProblem(result.Error);
+    }
+
+    [HttpPost(
+        "{customerId:guid}/addresses/{addressId:guid}/activate")]
+    [Authorize(Policy = AuthorizationPolicies.CustomerWrite)]
+    public async Task<IActionResult> ActivateAddress(
+        Guid customerId,
+        Guid addressId,
+        CancellationToken cancellationToken)
+    {
+        Result result = await service.ActivateAddressAsync(
+            customerId,
+            addressId,
+            cancellationToken);
+        return result.IsSuccess ? NoContent() : ToProblem(result.Error);
     }
 
     [HttpPut(

@@ -1,6 +1,7 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,6 +22,7 @@ using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Tenancy;
 using ServicePilot.Application.Authentication;
 using ServicePilot.Application.Authorization;
+using ServicePilot.Application.Users;
 using ServicePilot.Infrastructure;
 using ServicePilot.Infrastructure.Authentication;
 using ServicePilot.Infrastructure.Persistence;
@@ -57,10 +59,10 @@ builder.Services
                         .Where(pair =>
                             pair.Value?.Errors.Count > 0)
                         .ToDictionary(
-                            pair => pair.Key,
+                            pair => JsonNamingPolicy.CamelCase.ConvertName(pair.Key),
                             pair => pair.Value!.Errors
                                 .Select(_ =>
-                                    "The field is invalid.")
+                                    "Invalid")
                                 .Distinct(
                                     StringComparer.Ordinal)
                                 .ToArray(),
@@ -222,6 +224,37 @@ builder.Services
                 JwtRegisteredClaimNames.Sub,
             RoleClaimType =
                 AuthenticationClaimNames.Role
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                string? userIdValue = context.Principal?.FindFirst(
+                    JwtRegisteredClaimNames.Sub)?.Value;
+                string? organizationIdValue = context.Principal?.FindFirst(
+                    AuthenticationClaimNames.OrganizationId)?.Value;
+                string? versionValue = context.Principal?.FindFirst(
+                    AuthenticationClaimNames.SessionVersion)?.Value;
+                if (!Guid.TryParse(userIdValue, out Guid userId)
+                    || !Guid.TryParse(organizationIdValue, out Guid organizationId)
+                    || !int.TryParse(versionValue, out int sessionVersion))
+                {
+                    context.Fail("Session is invalid");
+                    return;
+                }
+
+                ISessionVersionValidator validator = context.HttpContext.RequestServices
+                    .GetRequiredService<ISessionVersionValidator>();
+                bool isValid = await validator.IsValidAsync(
+                    organizationId,
+                    userId,
+                    sessionVersion,
+                    context.HttpContext.RequestAborted);
+                if (!isValid)
+                {
+                    context.Fail("Session is no longer valid");
+                }
+            }
         };
     });
 

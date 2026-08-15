@@ -4,7 +4,10 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { problemPresentation } from "@/lib/api/problem-details";
+import {
+  problemActionState,
+  problemPresentation,
+} from "@/lib/api/problem-details";
 import {
   createAnonymousApiClient,
   sessionCookieName,
@@ -13,6 +16,7 @@ import {
 export type AuthActionState = {
   error?: string;
   supportCode?: string;
+  fieldErrors?: Record<string, string>;
 };
 
 const loginSchema = z.object({
@@ -90,7 +94,12 @@ export async function registerAction(
 
   if (!parsed.success) {
     return {
-      error: "Kayıt bilgilerini ve organizasyon adresini kontrol edin.",
+      fieldErrors: Object.fromEntries(
+        Object.keys(parsed.error.flatten().fieldErrors).map((field) => [
+          field,
+          "Bu alanı kontrol edin.",
+        ]),
+      ),
     };
   }
 
@@ -100,8 +109,7 @@ export async function registerAction(
   });
 
   if (!data) {
-    const problem = problemPresentation(error);
-    return { error: problem.message, supportCode: problem.supportCode };
+    return problemActionState(error);
   }
 
   await setSession(data.accessToken, data.expiresAtUtc);
