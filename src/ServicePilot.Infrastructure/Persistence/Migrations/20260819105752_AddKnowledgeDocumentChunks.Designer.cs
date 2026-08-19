@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ServicePilot.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using ServicePilot.Infrastructure.Persistence;
 namespace ServicePilot.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ServicePilotDbContext))]
-    partial class ServicePilotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260819105752_AddKnowledgeDocumentChunks")]
+    partial class AddKnowledgeDocumentChunks
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

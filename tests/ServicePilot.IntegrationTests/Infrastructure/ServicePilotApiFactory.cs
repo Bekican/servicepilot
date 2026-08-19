@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 using ServicePilot.Application.Abstractions.Email;
+using ServicePilot.Application.Knowledge;
 using ServicePilot.Infrastructure.Persistence;
 
 using Testcontainers.PostgreSql;
@@ -22,7 +23,7 @@ public sealed class ServicePilotApiFactory
         Guid.NewGuid().ToString("N"));
 
     private readonly PostgreSqlContainer _postgresContainer =
-        new PostgreSqlBuilder("postgres:17-alpine")
+        new PostgreSqlBuilder("pgvector/pgvector:0.8.6-pg17")
             .WithDatabase("servicepilot_tests")
             .WithUsername("servicepilot")
             .WithPassword("servicepilot-test-password")
@@ -71,6 +72,10 @@ public sealed class ServicePilotApiFactory
                 serviceProvider =>
                     serviceProvider.GetRequiredService<
                         FakeEmailSender>());
+            services.AddSingleton<ITextEmbeddingClient,
+                FakeTextEmbeddingClient>();
+            services.AddSingleton<KnowledgeTextChunker>();
+            services.AddScoped<KnowledgeDocumentIngestionProcessor>();
         });
     }
 

@@ -92,6 +92,7 @@ public sealed class ServicePilotDbContext(
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasPostgresExtension("vector");
         modelBuilder.ApplyConfigurationsFromAssembly(
             typeof(ServicePilotDbContext).Assembly);
 

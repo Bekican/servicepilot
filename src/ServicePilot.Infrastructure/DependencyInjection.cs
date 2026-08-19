@@ -4,6 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 using Npgsql;
 
+using Pgvector;
+
 using ServicePilot.Application.Abstractions.Authentication;
 using ServicePilot.Application.Abstractions.Email;
 using ServicePilot.Application.Abstractions.Persistence;
@@ -62,6 +64,15 @@ public static class DependencyInjection
         AddKnowledgeStorage(services, configuration);
         services.AddScoped<IKnowledgeDocumentRepository,
             KnowledgeDocumentRepository>();
+        services.AddScoped<IKnowledgeDocumentIndexRepository,
+            KnowledgeDocumentIndexRepository>();
+        services.AddSingleton<IPdfTextExtractor,
+            PdfPigTextExtractor>();
+        OllamaEmbeddingOptions embeddingOptions =
+            OllamaEmbeddingOptions.FromConfiguration(configuration);
+        services.AddSingleton(embeddingOptions);
+        services.AddSingleton<ITextEmbeddingClient,
+            OllamaTextEmbeddingClient>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
@@ -110,6 +121,10 @@ public static class DependencyInjection
         AddKnowledgeStorage(services, configuration);
         services.AddScoped<IKnowledgeDocumentRepository,
             KnowledgeDocumentRepository>();
+        services.AddScoped<IKnowledgeDocumentIndexRepository,
+            KnowledgeDocumentIndexRepository>();
+        services.AddSingleton<IPdfTextExtractor,
+            PdfPigTextExtractor>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
@@ -160,6 +175,8 @@ public static class DependencyInjection
                 {
                     Name = "ServicePilot.Database"
                 };
+
+            dataSourceBuilder.UseVector();
 
             dataSourceBuilder.ConfigureTracing(options =>
                 options

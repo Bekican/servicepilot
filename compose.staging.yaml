@@ -97,6 +97,9 @@ services:
       ForwardedHeaders__KnownNetworks__0: 172.16.0.0/12
       Database__MigrateOnStartup: "false"
       Observability__OtlpEnabled: "false"
+      KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+    volumes:
+      - knowledge-data:/var/lib/servicepilot/knowledge
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health/ready"]
       interval: 10s
@@ -131,6 +134,11 @@ services:
       Smtp__Password: ${SMTP_PASSWORD:-}
       Invitations__PublicBaseUrl: https://${PUBLIC_DOMAIN}/invitations/accept
       Observability__OtlpEnabled: "false"
+      KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+      KnowledgeAi__OllamaBaseUrl: ${OLLAMA_BASE_URL}
+      KnowledgeAi__EmbeddingModel: qwen3-embedding:0.6b
+    volumes:
+      - knowledge-data:/var/lib/servicepilot/knowledge
     healthcheck:
       test: ["CMD-SHELL", "grep -aq 'ServicePilot.Worker.dll' /proc/1/cmdline"]
       interval: 15s
@@ -197,6 +205,7 @@ services:
 
 volumes:
   postgres-data:
+  knowledge-data:
   caddy-data:
   caddy-config:
 

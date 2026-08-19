@@ -2,7 +2,7 @@ name: servicepilot-e2e
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:0.8.6-pg17
     environment:
       POSTGRES_DB: servicepilot_e2e
       POSTGRES_USER: servicepilot_e2e
@@ -62,6 +62,9 @@ services:
         http://127.0.0.1:13000/invitations/accept
       PasswordReset__PublicBaseUrl: http://127.0.0.1:13000/
       Database__MigrateOnStartup: "false"
+      KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+    volumes:
+      - knowledge-data:/var/lib/servicepilot/knowledge
     ports:
       - "15267:8080"
   worker:
@@ -83,6 +86,10 @@ services:
       Smtp__FromName: ServicePilot E2E
       Invitations__PublicBaseUrl: >-
         http://127.0.0.1:13000/invitations/accept
+      KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+      KnowledgeAi__ProcessingEnabled: "false"
+    volumes:
+      - knowledge-data:/var/lib/servicepilot/knowledge
 
   web:
     build:
@@ -99,3 +106,6 @@ services:
       PORT: 3000
     ports:
       - "13000:3000"
+
+volumes:
+  knowledge-data:

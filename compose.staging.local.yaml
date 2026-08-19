@@ -2,7 +2,7 @@ name: servicepilot-staging-local
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:0.8.6-pg17
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -89,6 +89,9 @@ services:
       Observability__OtlpEnabled: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+    volumes:
+      - knowledge-data:/var/lib/servicepilot/knowledge
     networks:
       - backend
 
@@ -117,6 +120,13 @@ services:
       Observability__OtlpEnabled: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+      KnowledgeAi__OllamaBaseUrl: http://host.docker.internal:11434
+      KnowledgeAi__EmbeddingModel: qwen3-embedding:0.6b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - knowledge-data:/var/lib/servicepilot/knowledge
     networks:
       - backend
 
@@ -172,6 +182,7 @@ services:
 
 volumes:
   postgres-data:
+  knowledge-data:
   caddy-data:
   caddy-config:
 

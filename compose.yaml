@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:0.8.6-pg17
     container_name: servicepilot-postgres
     restart: unless-stopped
     environment:
@@ -56,6 +56,9 @@ services:
         http://localhost:3000/invitations/accept
       PasswordReset__PublicBaseUrl: http://localhost:3000/
       Database__MigrateOnStartup: "true"
+      KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+    volumes:
+      - servicepilot-knowledge-data:/var/lib/servicepilot/knowledge
     ports:
       - "5267:8080"
 
@@ -80,6 +83,13 @@ services:
       Smtp__FromName: ServicePilot
       Invitations__PublicBaseUrl: >-
         http://localhost:3000/invitations/accept
+      KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+      KnowledgeAi__OllamaBaseUrl: http://host.docker.internal:11434
+      KnowledgeAi__EmbeddingModel: qwen3-embedding:0.6b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - servicepilot-knowledge-data:/var/lib/servicepilot/knowledge
 
   web:
     build:
@@ -101,3 +111,4 @@ services:
 
 volumes:
   servicepilot-postgres-data:
+  servicepilot-knowledge-data:

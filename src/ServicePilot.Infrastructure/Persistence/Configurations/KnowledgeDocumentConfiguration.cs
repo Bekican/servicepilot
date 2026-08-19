@@ -18,6 +18,11 @@ internal sealed class KnowledgeDocumentConfiguration
                 "ck_knowledge_documents_size_bytes",
                 "size_bytes > 0"));
         builder.HasKey(document => document.Id);
+        builder.HasAlternateKey(document => new
+        {
+            document.OrganizationId,
+            document.Id
+        });
         builder.Property(document => document.Id)
             .HasColumnName("id")
             .ValueGeneratedNever();
