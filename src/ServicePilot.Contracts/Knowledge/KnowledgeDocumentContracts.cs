@@ -12,3 +12,17 @@ public sealed record KnowledgeDocumentResponse(
     string? LastErrorMessage,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc);
+
+public sealed record AskKnowledgeRequest(string Question);
+
+public sealed record KnowledgeAnswerResponse(
+    string Answer,
+    bool InsufficientEvidence,
+    IReadOnlyList<KnowledgeCitationResponse> Citations);
+
+public sealed record KnowledgeCitationResponse(
+    string SourceId,
+    Guid DocumentId,
+    string OriginalFileName,
+    int PageNumber,
+    string ContentUrl);

@@ -164,6 +164,14 @@ public static class ApiErrorCatalog
             KnowledgeDocumentErrors.InvalidFileName,
             KnowledgeDocumentErrors.InvalidType,
             KnowledgeDocumentErrors.InvalidAccessScope);
+        Add(
+            descriptors,
+            StatusCodes.Status400BadRequest,
+            KnowledgeAssistantErrors.InvalidQuestion);
+        Add(
+            descriptors,
+            StatusCodes.Status503ServiceUnavailable,
+            KnowledgeAssistantErrors.ProviderUnavailable);
 
         Add(
             descriptors,

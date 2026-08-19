@@ -90,6 +90,11 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+      KnowledgeAi__OllamaBaseUrl: http://host.docker.internal:11434
+      KnowledgeAi__ChatModel: qwen3:4b
+      KnowledgeAi__EmbeddingModel: qwen3-embedding:0.6b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - knowledge-data:/var/lib/servicepilot/knowledge
     networks:

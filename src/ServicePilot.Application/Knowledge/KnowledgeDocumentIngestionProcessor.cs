@@ -95,6 +95,14 @@ public sealed class KnowledgeDocumentIngestionProcessor(
         {
             throw;
         }
+        catch (KnowledgeAiUnavailableException)
+        {
+            await MarkFailedAsync(
+                document,
+                "KnowledgeDocument.EmbeddingProviderUnavailable",
+                "The local embedding model is unavailable.",
+                cancellationToken);
+        }
         catch (KnowledgeDocumentProcessingException exception)
         {
             await MarkFailedAsync(

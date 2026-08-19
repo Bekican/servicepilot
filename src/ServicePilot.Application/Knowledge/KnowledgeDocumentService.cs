@@ -3,7 +3,6 @@ using ServicePilot.Application.Abstractions.Persistence;
 using ServicePilot.Application.Abstractions.Persistence.Exceptions;
 using ServicePilot.Application.Common;
 using ServicePilot.Domain.Knowledge;
-using ServicePilot.Domain.Users;
 
 namespace ServicePilot.Application.Knowledge;
 
@@ -135,7 +134,7 @@ public sealed class KnowledgeDocumentService(
         CancellationToken cancellationToken = default)
     {
         IReadOnlyCollection<KnowledgeDocumentAccessScope> scopes =
-            AllowedScopes(currentUser.Role);
+            KnowledgeAccessPolicy.AllowedScopes(currentUser.Role);
         IReadOnlyList<KnowledgeDocument> documents =
             await repository.ListAsync(
                 currentUser.OrganizationId,
@@ -237,24 +236,6 @@ public sealed class KnowledgeDocumentService(
         where TEnum : struct, Enum =>
         Enum.TryParse(value, true, out parsed)
         && Enum.IsDefined(parsed);
-
-    private static IReadOnlyCollection<KnowledgeDocumentAccessScope>
-        AllowedScopes(string role) =>
-        role switch
-        {
-            UserRoles.Owner or UserRoles.Admin =>
-                Enum.GetValues<KnowledgeDocumentAccessScope>(),
-            UserRoles.Dispatcher =>
-            [
-                KnowledgeDocumentAccessScope.Shared,
-                KnowledgeDocumentAccessScope.Operations
-            ],
-            UserRoles.Technician =>
-            [
-                KnowledgeDocumentAccessScope.Shared
-            ],
-            _ => []
-        };
 
     private static KnowledgeDocumentResponse Map(
         KnowledgeDocument document) =>

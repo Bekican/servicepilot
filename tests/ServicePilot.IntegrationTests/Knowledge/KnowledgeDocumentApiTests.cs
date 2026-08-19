@@ -224,6 +224,131 @@ public sealed class KnowledgeDocumentApiTests
     }
 
     [Fact]
+    public async Task Ask_ShouldRetrieveOwnTenantAndReturnSourceLink()
+    {
+        AuthenticationTokenResponse firstOwner =
+            await RegisterOwnerAsync();
+        AuthenticationTokenResponse secondOwner =
+            await RegisterOwnerAsync();
+        HttpResponseMessage created = await UploadAsync(
+            firstOwner.AccessToken,
+            $"{Guid.NewGuid():N}.pdf",
+            "TechnicalProcedure",
+            "Shared",
+            CreateTextPdf());
+        KnowledgeDocumentResponse uploaded =
+            Assert.IsType<KnowledgeDocumentResponse>(
+                await created.Content.ReadFromJsonAsync<
+                    KnowledgeDocumentResponse>());
+
+        await using (AsyncServiceScope scope =
+            _factory.Services.CreateAsyncScope())
+        {
+            var processor = scope.ServiceProvider.GetRequiredService<
+                ServicePilot.Application.Knowledge.
+                    KnowledgeDocumentIngestionProcessor>();
+            await processor.ProcessPendingAsync(batchSize: 20);
+        }
+
+        using HttpRequestMessage ownRequest = Authorized(
+            HttpMethod.Post,
+            "/api/knowledge/assistant/ask",
+            firstOwner.AccessToken);
+        ownRequest.Content = JsonContent.Create(
+            new AskKnowledgeRequest("Bakım nasıl yapılır?"));
+        HttpResponseMessage ownResponse =
+            await _client.SendAsync(ownRequest);
+        ownResponse.EnsureSuccessStatusCode();
+        KnowledgeAnswerResponse ownAnswer =
+            Assert.IsType<KnowledgeAnswerResponse>(
+                await ownResponse.Content.ReadFromJsonAsync<
+                    KnowledgeAnswerResponse>());
+
+        KnowledgeCitationResponse citation =
+            Assert.Single(ownAnswer.Citations);
+        Assert.Equal(uploaded.Id, citation.DocumentId);
+        Assert.Equal(1, citation.PageNumber);
+        Assert.Equal(
+            $"/api/knowledge/documents/{uploaded.Id}/content#page=1",
+            citation.ContentUrl);
+
+        using HttpRequestMessage otherTenantRequest = Authorized(
+            HttpMethod.Post,
+            "/api/knowledge/assistant/ask",
+            secondOwner.AccessToken);
+        otherTenantRequest.Content = JsonContent.Create(
+            new AskKnowledgeRequest("Bakım nasıl yapılır?"));
+        HttpResponseMessage otherTenantResponse =
+            await _client.SendAsync(otherTenantRequest);
+        otherTenantResponse.EnsureSuccessStatusCode();
+        KnowledgeAnswerResponse otherTenantAnswer =
+            Assert.IsType<KnowledgeAnswerResponse>(
+                await otherTenantResponse.Content.ReadFromJsonAsync<
+                    KnowledgeAnswerResponse>());
+
+        Assert.True(otherTenantAnswer.InsufficientEvidence);
+        Assert.Empty(otherTenantAnswer.Citations);
+    }
+
+    [Fact]
+    public async Task Retrieval_ShouldEnforceAccessScopeInsideSqlQuery()
+    {
+        AuthenticationTokenResponse owner = await RegisterOwnerAsync();
+        HttpResponseMessage created = await UploadAsync(
+            owner.AccessToken,
+            $"{Guid.NewGuid():N}.pdf",
+            "Warranty",
+            "Operations",
+            CreateTextPdf());
+        KnowledgeDocumentResponse uploaded =
+            Assert.IsType<KnowledgeDocumentResponse>(
+                await created.Content.ReadFromJsonAsync<
+                    KnowledgeDocumentResponse>());
+
+        await using AsyncServiceScope scope =
+            _factory.Services.CreateAsyncScope();
+        var processor = scope.ServiceProvider.GetRequiredService<
+            ServicePilot.Application.Knowledge.
+                KnowledgeDocumentIngestionProcessor>();
+        await processor.ProcessPendingAsync(batchSize: 20);
+
+        ServicePilot.Infrastructure.Persistence.ServicePilotDbContext
+            dbContext = scope.ServiceProvider.GetRequiredService<
+                ServicePilot.Infrastructure.Persistence.
+                    ServicePilotDbContext>();
+        Guid organizationId = await dbContext.KnowledgeDocuments
+            .Where(document => document.Id == uploaded.Id)
+            .Select(document => document.OrganizationId)
+            .SingleAsync();
+        var repository = scope.ServiceProvider.GetRequiredService<
+            ServicePilot.Application.Knowledge.
+                IKnowledgeRetrievalRepository>();
+        float[] queryEmbedding = new float[1024];
+        queryEmbedding[0] = 1;
+
+        var sharedOnly = await repository.SearchAsync(
+            organizationId,
+            [KnowledgeDocumentAccessScope.Shared],
+            queryEmbedding,
+            "fake-embedding-model",
+            1024,
+            12);
+        var operations = await repository.SearchAsync(
+            organizationId,
+            [KnowledgeDocumentAccessScope.Operations],
+            queryEmbedding,
+            "fake-embedding-model",
+            1024,
+            12);
+
+        Assert.Empty(sharedOnly);
+        Assert.NotEmpty(operations);
+        Assert.All(
+            operations,
+            chunk => Assert.Equal(uploaded.Id, chunk.DocumentId));
+    }
+
+    [Fact]
     public async Task Processor_ShouldExposeTextlessPdfFailure()
     {
         AuthenticationTokenResponse owner = await RegisterOwnerAsync();

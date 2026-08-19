@@ -57,6 +57,11 @@ services:
       PasswordReset__PublicBaseUrl: http://localhost:3000/
       Database__MigrateOnStartup: "true"
       KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+      KnowledgeAi__OllamaBaseUrl: http://host.docker.internal:11434
+      KnowledgeAi__ChatModel: qwen3:4b
+      KnowledgeAi__EmbeddingModel: qwen3-embedding:0.6b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - servicepilot-knowledge-data:/var/lib/servicepilot/knowledge
     ports:

@@ -26,53 +26,76 @@ internal sealed class OllamaTextEmbeddingClient(
                 nameof(inputs));
         }
 
-        List<IReadOnlyList<float>> embeddings = [];
-        for (int offset = 0;
-            offset < inputs.Count;
-            offset += options.BatchSize)
+        try
         {
-            string[] batch = inputs
-                .Skip(offset)
-                .Take(options.BatchSize)
-                .ToArray();
-            using HttpResponseMessage response =
-                await _httpClient.PostAsJsonAsync(
-                    "/api/embed",
-                    new OllamaEmbedRequest(
-                        options.Model,
-                        batch,
-                        Truncate: false,
-                        options.Dimensions),
-                    cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            List<IReadOnlyList<float>> embeddings = [];
+            for (int offset = 0;
+                offset < inputs.Count;
+                offset += options.BatchSize)
             {
-                throw new KnowledgeDocumentProcessingException(
-                    "KnowledgeDocument.EmbeddingProviderUnavailable",
-                    "The local embedding model is unavailable.");
+                string[] batch = inputs
+                    .Skip(offset)
+                    .Take(options.BatchSize)
+                    .ToArray();
+                using HttpResponseMessage response =
+                    await _httpClient.PostAsJsonAsync(
+                        "/api/embed",
+                        new OllamaEmbedRequest(
+                            options.Model,
+                            batch,
+                            Truncate: false,
+                            options.Dimensions),
+                        cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new KnowledgeAiUnavailableException(
+                        "The local embedding model is unavailable.");
+                }
+
+                OllamaEmbedResponse? result =
+                    await response.Content.ReadFromJsonAsync<
+                        OllamaEmbedResponse>(
+                        cancellationToken: cancellationToken);
+                if (result is null
+                    || result.Embeddings.Count != batch.Length
+                    || result.Embeddings.Any(embedding =>
+                        embedding.Count != options.Dimensions))
+                {
+                    throw new KnowledgeAiUnavailableException(
+                        "The local embedding model returned an invalid response.");
+                }
+
+                embeddings.AddRange(result.Embeddings);
             }
 
-            OllamaEmbedResponse? result =
-                await response.Content.ReadFromJsonAsync<
-                    OllamaEmbedResponse>(
-                    cancellationToken: cancellationToken);
-            if (result is null
-                || result.Embeddings.Count != batch.Length
-                || result.Embeddings.Any(embedding =>
-                    embedding.Count != options.Dimensions))
-            {
-                throw new KnowledgeDocumentProcessingException(
-                    "KnowledgeDocument.InvalidEmbeddingResponse",
-                    "The local embedding model returned an invalid response.");
-            }
-
-            embeddings.AddRange(result.Embeddings);
+            return new EmbeddingBatch(
+                options.Model,
+                options.Dimensions,
+                embeddings);
         }
-
-        return new EmbeddingBatch(
-            options.Model,
-            options.Dimensions,
-            embeddings);
+        catch (KnowledgeAiUnavailableException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new KnowledgeAiUnavailableException(
+                "The local embedding model timed out.");
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new KnowledgeAiUnavailableException(
+                "The local embedding model is unavailable.",
+                exception);
+        }
+        catch (System.Text.Json.JsonException exception)
+        {
+            throw new KnowledgeAiUnavailableException(
+                "The local embedding model returned invalid JSON.",
+                exception);
+        }
     }
 
     public void Dispose() => _httpClient.Dispose();

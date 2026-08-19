@@ -123,8 +123,20 @@ public static class DependencyInjection
             KnowledgeDocumentRepository>();
         services.AddScoped<IKnowledgeDocumentIndexRepository,
             KnowledgeDocumentIndexRepository>();
+        services.AddScoped<IKnowledgeRetrievalRepository,
+            KnowledgeRetrievalRepository>();
         services.AddSingleton<IPdfTextExtractor,
             PdfPigTextExtractor>();
+        OllamaEmbeddingOptions embeddingOptions =
+            OllamaEmbeddingOptions.FromConfiguration(configuration);
+        services.AddSingleton(embeddingOptions);
+        services.AddSingleton<ITextEmbeddingClient,
+            OllamaTextEmbeddingClient>();
+        OllamaGroundedAnswerOptions answerOptions =
+            OllamaGroundedAnswerOptions.FromConfiguration(configuration);
+        services.AddSingleton(answerOptions);
+        services.AddSingleton<IGroundedAnswerGenerator,
+            OllamaGroundedAnswerGenerator>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<

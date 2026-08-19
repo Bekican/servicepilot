@@ -98,6 +98,9 @@ services:
       Database__MigrateOnStartup: "false"
       Observability__OtlpEnabled: "false"
       KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
+      KnowledgeAi__OllamaBaseUrl: ${OLLAMA_BASE_URL}
+      KnowledgeAi__ChatModel: qwen3:4b
+      KnowledgeAi__EmbeddingModel: qwen3-embedding:0.6b
     volumes:
       - knowledge-data:/var/lib/servicepilot/knowledge
     healthcheck:

@@ -74,6 +74,8 @@ public sealed class ServicePilotApiFactory
                         FakeEmailSender>());
             services.AddSingleton<ITextEmbeddingClient,
                 FakeTextEmbeddingClient>();
+            services.AddSingleton<IGroundedAnswerGenerator,
+                FakeGroundedAnswerGenerator>();
             services.AddSingleton<KnowledgeTextChunker>();
             services.AddScoped<KnowledgeDocumentIngestionProcessor>();
         });
