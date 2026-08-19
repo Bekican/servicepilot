@@ -8,5 +8,7 @@ public enum UserCapability
     ManageServices,
     ManageAppointments,
     ViewDashboard,
-    RetryReminders
+    RetryReminders,
+    ManageKnowledgeDocuments,
+    UseKnowledgeAssistant
 }

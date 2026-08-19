@@ -64,18 +64,22 @@ public sealed class UserAuthorizationService(
                 UserCapability.ManageServices,
                 UserCapability.ManageAppointments,
                 UserCapability.ViewDashboard,
-                UserCapability.RetryReminders
+                UserCapability.RetryReminders,
+                UserCapability.ManageKnowledgeDocuments,
+                UserCapability.UseKnowledgeAssistant
             ],
             UserRoles.Dispatcher =>
             [
                 UserCapability.AccessSystem,
                 UserCapability.ManageCustomers,
                 UserCapability.ManageAppointments,
-                UserCapability.RetryReminders
+                UserCapability.RetryReminders,
+                UserCapability.UseKnowledgeAssistant
             ],
             UserRoles.Technician =>
             [
-                UserCapability.AccessSystem
+                UserCapability.AccessSystem,
+                UserCapability.UseKnowledgeAssistant
             ],
             _ => []
         };

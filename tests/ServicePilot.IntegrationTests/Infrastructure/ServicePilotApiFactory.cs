@@ -16,6 +16,10 @@ public sealed class ServicePilotApiFactory
     : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly TestLogSink _logSink = new();
+    private readonly string _knowledgeStorageRoot = Path.Combine(
+        Path.GetTempPath(),
+        "servicepilot-integration-tests",
+        Guid.NewGuid().ToString("N"));
 
     private readonly PostgreSqlContainer _postgresContainer =
         new PostgreSqlBuilder("postgres:17-alpine")
@@ -52,6 +56,9 @@ public sealed class ServicePilotApiFactory
         builder.UseSetting(
             "RateLimiting:PasswordResetPermitLimit",
             "20");
+        builder.UseSetting(
+            "KnowledgeStorage:RootPath",
+            _knowledgeStorageRoot);
 
         builder.ConfigureServices(services =>
         {
@@ -110,5 +117,11 @@ public sealed class ServicePilotApiFactory
     {
         await base.DisposeAsync();
         await _postgresContainer.DisposeAsync();
+        if (Directory.Exists(_knowledgeStorageRoot))
+        {
+            Directory.Delete(
+                _knowledgeStorageRoot,
+                recursive: true);
+        }
     }
 }

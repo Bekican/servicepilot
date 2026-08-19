@@ -3,6 +3,7 @@ using ServicePilot.Application.Authentication;
 using ServicePilot.Application.Authentication.PasswordReset;
 using ServicePilot.Application.Common;
 using ServicePilot.Application.Customers;
+using ServicePilot.Application.Knowledge;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Reminders;
 using ServicePilot.Application.Services;
@@ -145,6 +146,24 @@ public static class ApiErrorCatalog
             descriptors,
             StatusCodes.Status409Conflict,
             ReminderErrors.InvalidRetry);
+
+        Add(
+            descriptors,
+            StatusCodes.Status404NotFound,
+            KnowledgeDocumentErrors.NotFound);
+        Add(
+            descriptors,
+            StatusCodes.Status409Conflict,
+            KnowledgeDocumentErrors.DuplicateContent,
+            KnowledgeDocumentErrors.InvalidRetry);
+        Add(
+            descriptors,
+            StatusCodes.Status400BadRequest,
+            KnowledgeDocumentErrors.InvalidPdf,
+            KnowledgeDocumentErrors.FileTooLarge,
+            KnowledgeDocumentErrors.InvalidFileName,
+            KnowledgeDocumentErrors.InvalidType,
+            KnowledgeDocumentErrors.InvalidAccessScope);
 
         Add(
             descriptors,

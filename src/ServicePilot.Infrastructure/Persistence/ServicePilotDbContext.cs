@@ -9,6 +9,7 @@ using ServicePilot.Domain.Auditing;
 using ServicePilot.Domain.Customers;
 using ServicePilot.Domain.Email;
 using ServicePilot.Domain.Employees;
+using ServicePilot.Domain.Knowledge;
 using ServicePilot.Domain.Organizations;
 using ServicePilot.Domain.Reminders;
 using ServicePilot.Domain.Services;
@@ -30,6 +31,8 @@ public sealed class ServicePilotDbContext(
         Set<CustomerAddress>();
     public DbSet<EmailOutboxMessage> EmailOutbox => Set<EmailOutboxMessage>();
     public DbSet<Organization> Organizations => Set<Organization>();
+    public DbSet<KnowledgeDocument> KnowledgeDocuments =>
+        Set<KnowledgeDocument>();
     public DbSet<Reminder> Reminders => Set<Reminder>();
     public DbSet<ServiceCatalogItem> Services =>
         Set<ServiceCatalogItem>();

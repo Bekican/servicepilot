@@ -12,4 +12,8 @@ internal static class AuthorizationPolicies
         "DashboardView";
     public const string ReminderRetry =
         "ReminderRetry";
+    public const string KnowledgeManage =
+        "KnowledgeManage";
+    public const string KnowledgeUse =
+        "KnowledgeUse";
 }

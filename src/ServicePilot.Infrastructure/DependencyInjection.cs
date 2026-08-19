@@ -12,6 +12,7 @@ using ServicePilot.Application.Auditing;
 using ServicePilot.Application.Authentication.PasswordReset;
 using ServicePilot.Application.Customers;
 using ServicePilot.Application.Dashboard;
+using ServicePilot.Application.Knowledge;
 using ServicePilot.Application.Organizations;
 using ServicePilot.Application.Reminders;
 using ServicePilot.Application.Retention;
@@ -23,6 +24,7 @@ using ServicePilot.Infrastructure.Authentication;
 using ServicePilot.Infrastructure.Customers;
 using ServicePilot.Infrastructure.Dashboard;
 using ServicePilot.Infrastructure.Email;
+using ServicePilot.Infrastructure.Knowledge;
 using ServicePilot.Infrastructure.Organizations;
 using ServicePilot.Infrastructure.Persistence;
 using ServicePilot.Infrastructure.Reminders;
@@ -57,6 +59,9 @@ public static class DependencyInjection
         services.AddScoped<IRetentionService,
             RetentionService>();
         services.AddScoped<IEmailOutbox, EmailOutboxRepository>();
+        AddKnowledgeStorage(services, configuration);
+        services.AddScoped<IKnowledgeDocumentRepository,
+            KnowledgeDocumentRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
@@ -102,6 +107,9 @@ public static class DependencyInjection
         services.AddScoped<IRetentionService,
             RetentionService>();
         services.AddScoped<IEmailOutbox, EmailOutboxRepository>();
+        AddKnowledgeStorage(services, configuration);
+        services.AddScoped<IKnowledgeDocumentRepository,
+            KnowledgeDocumentRepository>();
         services.AddScoped<IUnitOfWork>(
             serviceProvider =>
                 serviceProvider.GetRequiredService<
@@ -178,5 +186,15 @@ public static class DependencyInjection
                 options.UseNpgsql(dataSource);
                 options.AddInterceptors(tracingInterceptor);
             });
+    }
+
+    private static void AddKnowledgeStorage(
+        IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddSingleton(_ =>
+            KnowledgeStorageOptions.FromConfiguration(configuration));
+        services.AddSingleton<IKnowledgeDocumentStorage,
+            LocalKnowledgeDocumentStorage>();
     }
 }

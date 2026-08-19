@@ -45,6 +45,21 @@ public sealed class UserAuthorizationServiceTests
             UserRoles.Technician,
             UserCapability.ManageAppointments,
             false
+        },
+        {
+            UserRoles.Admin,
+            UserCapability.ManageKnowledgeDocuments,
+            true
+        },
+        {
+            UserRoles.Dispatcher,
+            UserCapability.ManageKnowledgeDocuments,
+            false
+        },
+        {
+            UserRoles.Technician,
+            UserCapability.UseKnowledgeAssistant,
+            true
         }
     };
 

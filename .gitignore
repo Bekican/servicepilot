@@ -430,6 +430,8 @@ playwright-report/
 
 # Local database recovery artefacts and release state
 backups/
+.data/
+data/
 .deploy-state/
 .env.minio.local
 

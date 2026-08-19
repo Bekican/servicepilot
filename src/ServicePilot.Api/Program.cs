@@ -7,8 +7,8 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -206,6 +206,14 @@ builder.Services.AddAuthorization(options =>
         options,
         AuthorizationPolicies.ReminderRetry,
         UserCapability.RetryReminders);
+    AddCapabilityPolicy(
+        options,
+        AuthorizationPolicies.KnowledgeManage,
+        UserCapability.ManageKnowledgeDocuments);
+    AddCapabilityPolicy(
+        options,
+        AuthorizationPolicies.KnowledgeUse,
+        UserCapability.UseKnowledgeAssistant);
 });
 builder.Services.AddScoped<
     IAuthorizationHandler,

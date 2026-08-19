@@ -9,6 +9,7 @@ using ServicePilot.Application.Authorization;
 using ServicePilot.Application.Customers;
 using ServicePilot.Application.Dashboard;
 using ServicePilot.Application.Email;
+using ServicePilot.Application.Knowledge;
 using ServicePilot.Application.Organizations.CreateOrganization;
 using ServicePilot.Application.Reminders;
 using ServicePilot.Application.Services;
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<ReminderManagementService>();
         services.AddScoped<ReminderProcessor>();
         services.AddScoped<EmailOutboxProcessor>();
+        services.AddScoped<KnowledgeDocumentService>();
 
         return services;
     }
