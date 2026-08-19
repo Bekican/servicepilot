@@ -972,6 +972,187 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/knowledge/assistant/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AskKnowledgeRequest"];
+                    "text/json": components["schemas"]["AskKnowledgeRequest"];
+                    "application/*+json": components["schemas"]["AskKnowledgeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["KnowledgeAnswerResponse"];
+                        "application/json": components["schemas"]["KnowledgeAnswerResponse"];
+                        "text/json": components["schemas"]["KnowledgeAnswerResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledge/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["KnowledgeDocumentResponse"][];
+                        "application/json": components["schemas"]["KnowledgeDocumentResponse"][];
+                        "text/json": components["schemas"]["KnowledgeDocumentResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        file?: components["schemas"]["IFormFile"];
+                    } & {
+                        documentType?: string;
+                    } & {
+                        accessScope?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["KnowledgeDocumentResponse"];
+                        "application/json": components["schemas"]["KnowledgeDocumentResponse"];
+                        "text/json": components["schemas"]["KnowledgeDocumentResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledge/documents/{id}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/knowledge/documents/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reminders": {
         parameters: {
             query?: never;
@@ -1647,6 +1828,9 @@ export interface components {
         AppointmentStatusRequest: {
             status: string;
         };
+        AskKnowledgeRequest: {
+            question: string;
+        };
         AssignTechnicianRequest: {
             /** Format: uuid */
             technicianUserId: string;
@@ -1769,6 +1953,40 @@ export interface components {
             cancelledAppointmentCount: number | string;
             /** Format: int32 */
             failedReminderCount: number | string;
+        };
+        /** Format: binary */
+        IFormFile: string;
+        KnowledgeAnswerResponse: {
+            answer: string;
+            insufficientEvidence: boolean;
+            citations: components["schemas"]["KnowledgeCitationResponse"][];
+        };
+        KnowledgeCitationResponse: {
+            sourceId: string;
+            /** Format: uuid */
+            documentId: string;
+            originalFileName: string;
+            /** Format: int32 */
+            pageNumber: number | string;
+            contentUrl: string;
+        };
+        KnowledgeDocumentResponse: {
+            /** Format: uuid */
+            id: string;
+            originalFileName: string;
+            /** Format: int64 */
+            sizeBytes: number | string;
+            documentType: string;
+            accessScope: string;
+            status: string;
+            /** Format: int32 */
+            processingAttemptCount: number | string;
+            lastErrorCode: null | string;
+            lastErrorMessage: null | string;
+            /** Format: date-time */
+            createdAtUtc: string;
+            /** Format: date-time */
+            updatedAtUtc: string;
         };
         LoginRequest: {
             organizationSlug: string;

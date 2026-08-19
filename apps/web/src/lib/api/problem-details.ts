@@ -35,6 +35,16 @@ const translatedMessages: Record<string, string> = {
   "User.SelfModificationNotAllowed":
     "Kendi rolünüzü veya durumunuzu değiştiremezsiniz.",
   "User.LastActiveOwner": "Son aktif Owner pasifleştirilemez.",
+  "KnowledgeAssistant.InvalidQuestion":
+    "Sorunuz 1 ile 2000 karakter arasında olmalıdır.",
+  "KnowledgeAssistant.ProviderUnavailable":
+    "Yerel bilgi asistanına şu anda ulaşılamıyor. Lütfen biraz sonra tekrar deneyin.",
+  "KnowledgeDocument.InvalidPdf":
+    "Yalnızca geçerli PDF dosyaları yüklenebilir.",
+  "KnowledgeDocument.FileTooLarge": "PDF dosyası en fazla 20 MB olabilir.",
+  "KnowledgeDocument.DuplicateContent": "Bu belge daha önce yüklenmiş.",
+  "KnowledgeDocument.InvalidAccessScope":
+    "Bu belge türü seçilen erişim kapsamıyla paylaşılamaz.",
 };
 
 const translatedFieldErrors: Record<string, string> = {

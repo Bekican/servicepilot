@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ChevronDown,
   Gauge,
+  LibraryBig,
   LogOut,
   Menu,
   PackageOpen,
@@ -59,6 +60,12 @@ const navigation = [
     label: "Hizmetler",
     icon: Wrench,
     capability: "AccessSystem",
+  },
+  {
+    href: "/knowledge",
+    label: "Bilgi Asistanı",
+    icon: LibraryBig,
+    capability: "UseKnowledgeAssistant",
   },
   {
     href: "/reminders",

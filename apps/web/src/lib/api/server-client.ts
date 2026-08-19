@@ -62,3 +62,19 @@ export async function createServerApiClient() {
     },
   });
 }
+
+export async function fetchServerApi(path: string, init: RequestInit = {}) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(sessionCookieName)?.value;
+  const requestHeaders = new Headers(init.headers);
+  requestHeaders.set(correlationIdHeader, await requestCorrelationId());
+  if (token) requestHeaders.set("Authorization", `Bearer ${token}`);
+
+  return servicePilotApiFetch(
+    new Request(`${apiBaseUrl()}${path}`, {
+      ...init,
+      cache: "no-store",
+      headers: requestHeaders,
+    }),
+  );
+}
