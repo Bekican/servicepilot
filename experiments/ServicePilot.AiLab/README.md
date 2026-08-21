@@ -26,12 +26,19 @@ Run one experiment:
 ```powershell
 dotnet run --project experiments/ServicePilot.AiLab -- structured
 dotnet run --project experiments/ServicePilot.AiLab -- embed
+dotnet run --project experiments/ServicePilot.AiLab -- eval
 ```
 
 The structured experiment verifies both a grounded answer with an inline
 citation and abstention when the sources do not contain an answer. The
 embedding experiment verifies that the relevant Turkish maintenance passage
 ranks above unrelated passages by cosine similarity.
+
+The evaluation command runs the checked-in retrieval and answer cases through
+the real local models. It reports Recall@3, grounded-answer and abstention rates
+and exits non-zero when a regression drops below the configured thresholds.
+These cases are a repeatable project baseline, not a general-purpose model
+benchmark.
 
 ## Optional configuration
 

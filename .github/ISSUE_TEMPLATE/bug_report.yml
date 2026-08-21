@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a reproducible ServicePilot defect
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include credentials, customer data or private PDF content. Report security issues through the private channel in SECURITY.md.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Start ...
+        2. Open ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit or version
+      description: Commit SHA, branch or image digest where the problem occurs.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Docker, .NET, Ollama and model versions when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Logs, screenshots or traces with all sensitive values removed.

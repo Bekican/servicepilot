@@ -1,0 +1,10 @@
+# Default owner and high-risk boundaries.
+* @Bekican
+
+/.github/ @Bekican
+/deploy/ @Bekican
+/src/ServicePilot.Api/ @Bekican
+/src/ServicePilot.Domain/Knowledge/ @Bekican
+/src/ServicePilot.Application/Knowledge/ @Bekican
+/src/ServicePilot.Infrastructure/Knowledge/ @Bekican
+/src/ServicePilot.Infrastructure/Persistence/ @Bekican
