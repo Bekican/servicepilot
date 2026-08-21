@@ -135,13 +135,22 @@ public sealed class KnowledgeAssistantService(
             .ToArray();
         bool invalid = string.IsNullOrWhiteSpace(generated.Answer)
             || citationIds.Length == 0
-            || citationIds.Any(id => !supplied.ContainsKey(id))
-            || citationIds.Any(id => !generated.Answer.Contains(
-                $"[{id}]",
-                StringComparison.Ordinal));
+            || citationIds.Any(id => !supplied.ContainsKey(id));
         if (invalid)
         {
             return NoAnswer();
+        }
+
+        string normalizedAnswer = generated.Answer.Trim();
+        string[] missingMarkers = citationIds
+            .Where(id => !normalizedAnswer.Contains(
+                $"[{id}]",
+                StringComparison.Ordinal))
+            .Select(id => $"[{id}]")
+            .ToArray();
+        if (missingMarkers.Length > 0)
+        {
+            normalizedAnswer += " " + string.Join(" ", missingMarkers);
         }
 
         KnowledgeCitation[] citations = citationIds
@@ -155,7 +164,7 @@ public sealed class KnowledgeAssistantService(
                     + $"#page={source.PageNumber}"))
             .ToArray();
         return new KnowledgeAnswer(
-            generated.Answer.Trim(),
+            normalizedAnswer,
             false,
             citations);
     }

@@ -71,6 +71,36 @@ public sealed class KnowledgeAssistantServiceTests
     }
 
     [Fact]
+    public async Task Ask_ShouldAppendMissingCitationMarker()
+    {
+        Guid documentId = Guid.NewGuid();
+        KnowledgeAssistantService service = CreateService(
+            new FakeRetrievalRepository(
+            [
+                new RetrievedKnowledgeChunk(
+                    documentId,
+                    "bakim.pdf",
+                    2,
+                    0,
+                    "Filtre alti ayda bir kontrol edilir.",
+                    0.05)
+            ]),
+            new FakeAnswerGenerator(
+                new GeneratedGroundedAnswer(
+                    "Filtre alti ayda bir kontrol edilir.",
+                    ["S1"],
+                    false)));
+
+        var result = await service.AskAsync(
+            "Kombi filtresini ne zaman kontrol etmeliyim?");
+
+        Assert.True(result.IsSuccess);
+        Assert.False(result.Value.InsufficientEvidence);
+        Assert.EndsWith("[S1]", result.Value.Answer);
+        Assert.Single(result.Value.Citations);
+    }
+
+    [Fact]
     public async Task Ask_ShouldApplyTechnicianScopeAndTenant()
     {
         FakeCurrentUser currentUser = new(

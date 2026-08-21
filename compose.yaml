@@ -30,6 +30,17 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  knowledge-storage-init:
+    image: alpine:3.21
+    restart: "no"
+    user: root
+    command:
+      - sh
+      - -c
+      - chown -R 1654:1654 /var/lib/servicepilot/knowledge
+    volumes:
+      - servicepilot-knowledge-data:/var/lib/servicepilot/knowledge
+
   api:
     build:
       context: .
@@ -41,6 +52,8 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+      knowledge-storage-init:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Database: >-
