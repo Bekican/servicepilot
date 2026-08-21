@@ -58,6 +58,28 @@ services:
     networks:
       - backend
 
+  knowledge-storage-init:
+    image: alpine:3.21
+    user: "0:0"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    command:
+      - sh
+      - -ec
+      - >-
+        chown 1654:1654 /var/lib/servicepilot/knowledge &&
+        chmod 0750 /var/lib/servicepilot/knowledge
+    volumes:
+      - knowledge-data:/var/lib/servicepilot/knowledge
+    restart: "no"
+
   api:
     image: ${SERVICEPILOT_API_IMAGE:-servicepilot-staging-api:local}
     build:
@@ -66,6 +88,8 @@ services:
     restart: unless-stopped
     depends_on:
       migrator:
+        condition: service_completed_successfully
+      knowledge-storage-init:
         condition: service_completed_successfully
       mailpit:
         condition: service_started
@@ -109,6 +133,8 @@ services:
     depends_on:
       api:
         condition: service_started
+      knowledge-storage-init:
+        condition: service_completed_successfully
       otel-collector:
         condition: service_started
     environment:
@@ -128,6 +154,7 @@ services:
       KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
       KnowledgeAi__OllamaBaseUrl: http://host.docker.internal:11434
       KnowledgeAi__EmbeddingModel: qwen3-embedding:0.6b
+      KnowledgeOcr__Enabled: "true"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

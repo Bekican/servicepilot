@@ -1,13 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 
 using ServicePilot.Application.Retention;
+using ServicePilot.Application.Knowledge;
+using ServicePilot.Domain.Knowledge;
 using ServicePilot.Domain.Users;
 using ServicePilot.Infrastructure.Persistence;
 
 namespace ServicePilot.Infrastructure.Retention;
 
 internal sealed class RetentionService(
-    ServicePilotDbContext dbContext)
+    ServicePilotDbContext dbContext,
+    IKnowledgeDocumentStorage knowledgeStorage)
     : IRetentionService
 {
     public async Task<RetentionResult> RunAsync(
@@ -55,10 +58,62 @@ internal sealed class RetentionService(
                             auditLog =>
                                 auditLog.AnonymizedAtUtc,
                             nowUtc),
+                cancellationToken);
+
+        DateTimeOffset knowledgeCutoff = nowUtc - TimeSpan.FromDays(7);
+        var deletedDocuments = await dbContext.KnowledgeDocuments
+            .AsNoTracking()
+            .Where(document =>
+                document.Status == KnowledgeDocumentStatus.Deleted
+                && document.UpdatedAtUtc < knowledgeCutoff)
+            .OrderBy(document => document.UpdatedAtUtc)
+            .ThenBy(document => document.Id)
+            .Take(100)
+            .Select(document => new
+            {
+                document.Id,
+                document.StorageKey
+            })
+            .ToArrayAsync(cancellationToken);
+        List<Guid> purgeableDocumentIds = [];
+        foreach (var document in deletedDocuments)
+        {
+            try
+            {
+                await knowledgeStorage.DeleteAsync(
+                    document.StorageKey,
                     cancellationToken);
+                purgeableDocumentIds.Add(document.Id);
+            }
+            catch (FileNotFoundException)
+            {
+                purgeableDocumentIds.Add(document.Id);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                purgeableDocumentIds.Add(document.Id);
+            }
+            catch (IOException)
+            {
+                // Keep the database row so the next retention cycle retries.
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Keep the database row so the next retention cycle retries.
+            }
+        }
+
+        int purgedKnowledgeDocumentCount = purgeableDocumentIds.Count == 0
+            ? 0
+            : await dbContext.KnowledgeDocuments
+                .Where(document =>
+                    purgeableDocumentIds.Contains(document.Id)
+                    && document.Status == KnowledgeDocumentStatus.Deleted)
+                .ExecuteDeleteAsync(cancellationToken);
 
         return new RetentionResult(
             deletedInvitationCount,
-            anonymizedAuditLogCount);
+            anonymizedAuditLogCount,
+            purgedKnowledgeDocumentCount);
     }
 }

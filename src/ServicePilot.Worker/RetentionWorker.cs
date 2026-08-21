@@ -38,13 +38,18 @@ public sealed class RetentionWorker(
                     activity?.SetTag(
                         "servicepilot.retention.anonymized_audit_count",
                         result.AnonymizedAuditLogCount);
+                    activity?.SetTag(
+                        "servicepilot.retention.purged_knowledge_document_count",
+                        result.PurgedKnowledgeDocumentCount);
 
                     logger.LogInformation(
                         "Retention completed: {InvitationCount} "
                         + "invitations deleted, {AuditCount} "
-                        + "audit logs anonymized",
+                        + "audit logs anonymized, {KnowledgeDocumentCount} "
+                        + "knowledge documents purged",
                         result.DeletedInvitationCount,
-                        result.AnonymizedAuditLogCount);
+                        result.AnonymizedAuditLogCount,
+                        result.PurgedKnowledgeDocumentCount);
                 }
                 catch (OperationCanceledException)
                     when (stoppingToken.IsCancellationRequested)

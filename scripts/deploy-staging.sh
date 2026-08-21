@@ -24,8 +24,8 @@ done
 docker info >/dev/null 2>&1 || { echo "Docker Engine is unavailable." >&2; exit 1; }
 
 available_kib="$(df -Pk "$repository_root" | awk 'NR == 2 {print $4}')"
-if [ -z "$available_kib" ] || [ "$available_kib" -lt 2097152 ]; then
-    echo "At least 2 GiB of free disk space is required before deployment." >&2
+if [ -z "$available_kib" ] || [ "$available_kib" -lt 10485760 ]; then
+    echo "At least 10 GiB of free disk space is required before deployment." >&2
     exit 1
 fi
 
@@ -82,12 +82,16 @@ wait_for_public_readiness() {
     deadline="$(($(date +%s) + 180))"
     while :; do
         api_ready=false
+        knowledge_ready=false
         web_ready=false
         curl --fail --silent --show-error --max-time 10 \
             "https://$domain/ops/api/ready" >/dev/null 2>&1 && api_ready=true
         curl --fail --silent --show-error --max-time 10 \
+            "https://$domain/ops/api/knowledge" >/dev/null 2>&1 && knowledge_ready=true
+        curl --fail --silent --show-error --max-time 10 \
             "https://$domain/ops/web/ready" >/dev/null 2>&1 && web_ready=true
-        if [ "$api_ready" = "true" ] && [ "$web_ready" = "true" ]; then
+        if [ "$api_ready" = "true" ] && [ "$knowledge_ready" = "true" ] \
+            && [ "$web_ready" = "true" ]; then
             return 0
         fi
         [ "$(date +%s)" -lt "$deadline" ] || return 1
@@ -110,7 +114,7 @@ wait_for_worker_health() {
     done
 }
 
-compose_with_release "$candidate_release" pull postgres caddy api worker web migrator
+compose_with_release "$candidate_release" pull postgres caddy ollama api worker web migrator
 if grep -q '^SMTP_MODE=mailpit$' "$environment_file"; then
     compose_with_release "$candidate_release" pull mailpit
 fi
@@ -129,9 +133,9 @@ fi
 start_foundation() {
     release_file="$1"
     if grep -q '^SMTP_MODE=mailpit$' "$environment_file"; then
-        compose_with_release "$release_file" up -d postgres mailpit
+        compose_with_release "$release_file" up -d postgres ollama mailpit
     else
-        compose_with_release "$release_file" up -d postgres
+        compose_with_release "$release_file" up -d postgres ollama
     fi
 }
 
@@ -151,6 +155,10 @@ fi
 
 echo "Applying forward-only migrations."
 compose_with_release "$candidate_release" --profile operations run --rm migrator
+
+echo "Preparing local Qwen models and secured document storage."
+compose_with_release "$candidate_release" --profile operations run --rm ollama-model-init
+compose_with_release "$candidate_release" run --rm knowledge-storage-init
 
 if [ "$had_current_release" = "true" ]; then
     cp "$current_release" "$previous_release"

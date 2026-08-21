@@ -155,7 +155,10 @@ public static class ApiErrorCatalog
             descriptors,
             StatusCodes.Status409Conflict,
             KnowledgeDocumentErrors.DuplicateContent,
-            KnowledgeDocumentErrors.InvalidRetry);
+            KnowledgeDocumentErrors.InvalidRetry,
+            KnowledgeDocumentErrors.ConcurrentChange,
+            KnowledgeDocumentErrors.DocumentLimitReached,
+            KnowledgeDocumentErrors.StorageLimitReached);
         Add(
             descriptors,
             StatusCodes.Status400BadRequest,

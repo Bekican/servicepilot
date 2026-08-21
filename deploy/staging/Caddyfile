@@ -19,6 +19,11 @@
 		reverse_proxy api:8080
 	}
 
+	handle /ops/api/knowledge {
+		rewrite * /health/knowledge
+		reverse_proxy api:8080
+	}
+
 	handle /ops/web/ready {
 		rewrite * /api/health
 		reverse_proxy web:3000

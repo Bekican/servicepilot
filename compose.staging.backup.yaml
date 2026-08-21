@@ -32,6 +32,9 @@ services:
       RESTIC_KEEP_WEEKLY: ${RESTIC_KEEP_WEEKLY:-8}
       RESTIC_APPLY_RETENTION: ${RESTIC_APPLY_RETENTION:-true}
       BACKUP_HEARTBEAT_URL: ${BACKUP_HEARTBEAT_URL:-}
+      KNOWLEDGE_SOURCE_PATH: /source/knowledge
+    volumes:
+      - knowledge-data:/source/knowledge:ro
     restart: "no"
     logging:
       driver: json-file

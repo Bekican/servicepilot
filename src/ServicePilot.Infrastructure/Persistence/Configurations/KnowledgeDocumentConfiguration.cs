@@ -66,6 +66,7 @@ internal sealed class KnowledgeDocumentConfiguration
             .HasColumnName("status")
             .HasConversion<string>()
             .HasMaxLength(20)
+            .IsConcurrencyToken()
             .IsRequired();
         builder.Property(document => document.ProcessingAttemptCount)
             .HasColumnName("processing_attempt_count")

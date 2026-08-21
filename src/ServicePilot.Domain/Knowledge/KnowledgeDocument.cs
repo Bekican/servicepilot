@@ -92,7 +92,10 @@ public sealed class KnowledgeDocument
                 : KnowledgeDocumentAccessScope.Operations;
 
     public bool CanBeAccessedByRole(string role) =>
-        AccessScope switch
+        Status is KnowledgeDocumentStatus.Deleting
+            or KnowledgeDocumentStatus.Deleted
+            ? false
+            : AccessScope switch
         {
             KnowledgeDocumentAccessScope.Shared =>
                 UserRoles.IsSupported(role),
@@ -172,6 +175,36 @@ public sealed class KnowledgeDocument
         LastErrorCode = null;
         LastErrorMessage = null;
         UpdatedAtUtc = requestedAtUtc;
+    }
+
+    public void ChangeAccessScope(
+        KnowledgeDocumentAccessScope accessScope,
+        DateTimeOffset changedAtUtc)
+    {
+        if (Status is KnowledgeDocumentStatus.Deleting
+            or KnowledgeDocumentStatus.Deleted)
+        {
+            throw new InvalidOperationException(
+                "Deleted documents cannot be changed");
+        }
+
+        EnsureScopeAllowed(Type, accessScope);
+        AccessScope = accessScope;
+        UpdatedAtUtc = changedAtUtc;
+    }
+
+    public void MarkDeleted(DateTimeOffset deletedAtUtc)
+    {
+        if (Status == KnowledgeDocumentStatus.Deleted)
+        {
+            return;
+        }
+
+        Status = KnowledgeDocumentStatus.Deleted;
+        ProcessingStartedAtUtc = null;
+        LastErrorCode = null;
+        LastErrorMessage = null;
+        UpdatedAtUtc = deletedAtUtc;
     }
 
     private void EnsureProcessing()

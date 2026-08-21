@@ -66,8 +66,7 @@ public static class DependencyInjection
             KnowledgeDocumentRepository>();
         services.AddScoped<IKnowledgeDocumentIndexRepository,
             KnowledgeDocumentIndexRepository>();
-        services.AddSingleton<IPdfTextExtractor,
-            PdfPigTextExtractor>();
+        AddPdfTextExtraction(services, configuration);
         OllamaEmbeddingOptions embeddingOptions =
             OllamaEmbeddingOptions.FromConfiguration(configuration);
         services.AddSingleton(embeddingOptions);
@@ -125,8 +124,7 @@ public static class DependencyInjection
             KnowledgeDocumentIndexRepository>();
         services.AddScoped<IKnowledgeRetrievalRepository,
             KnowledgeRetrievalRepository>();
-        services.AddSingleton<IPdfTextExtractor,
-            PdfPigTextExtractor>();
+        AddPdfTextExtraction(services, configuration);
         OllamaEmbeddingOptions embeddingOptions =
             OllamaEmbeddingOptions.FromConfiguration(configuration);
         services.AddSingleton(embeddingOptions);
@@ -223,7 +221,37 @@ public static class DependencyInjection
     {
         services.AddSingleton(_ =>
             KnowledgeStorageOptions.FromConfiguration(configuration));
+        services.AddSingleton(_ => new KnowledgeDocumentLimits(
+            Math.Clamp(
+                configuration.GetValue(
+                    "KnowledgeLimits:MaximumDocumentsPerOrganization",
+                    500),
+                1,
+                100_000),
+            Math.Clamp(
+                configuration.GetValue(
+                    "KnowledgeLimits:MaximumStorageBytesPerOrganization",
+                    5L * 1024 * 1024 * 1024),
+                KnowledgeDocumentService.MaximumPdfBytes,
+                1024L * 1024 * 1024 * 1024)));
         services.AddSingleton<IKnowledgeDocumentStorage,
             LocalKnowledgeDocumentStorage>();
+    }
+
+    private static void AddPdfTextExtraction(
+        IServiceCollection services,
+        IConfiguration configuration)
+    {
+        KnowledgeOcrOptions options =
+            KnowledgeOcrOptions.FromConfiguration(configuration);
+        services.AddSingleton(options);
+        services.AddSingleton<PdfPigTextExtractor>();
+        services.AddSingleton<OcrFallbackPdfTextExtractor>();
+        services.AddSingleton<IPdfTextExtractor>(serviceProvider =>
+            options.Enabled
+                ? serviceProvider.GetRequiredService<
+                    OcrFallbackPdfTextExtractor>()
+                : serviceProvider.GetRequiredService<
+                    PdfPigTextExtractor>());
     }
 }

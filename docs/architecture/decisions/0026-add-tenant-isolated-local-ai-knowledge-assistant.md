@@ -1,6 +1,6 @@
 # ADR 0026: Add a Tenant-Isolated Local AI Knowledge Assistant
 
-- Status: Accepted
+- Status: Accepted (amended 2026-08-21)
 - Date: 2026-08-19
 
 ## Context
@@ -20,7 +20,7 @@ explicit configuration and deployment decision.
 
 The first version will provide:
 
-- Text-based PDF upload and lifecycle management
+- Text-based and scanned PDF upload with bounded Turkish/English OCR fallback
 - Background text extraction, chunking and indexing
 - Tenant- and role-scoped semantic retrieval
 - Grounded question answering in the language used by the user
@@ -28,9 +28,9 @@ The first version will provide:
 - Private per-user conversation history
 - Visible processing failures and retry
 
-The first version will not provide OCR, image understanding, internet search,
-live customer or appointment queries, function calling, write actions, model
-fine-tuning or automatic cloud fallback.
+The first version will not provide general image understanding, internet
+search, live customer or appointment queries, function calling, write actions,
+model fine-tuning or automatic cloud fallback.
 
 ## Decision
 
@@ -122,10 +122,11 @@ bounded attempts with visible failure codes.
 
 ## PDF Acceptance Rules
 
-The first version accepts text-based PDFs up to 20 MB and 300 pages. It checks
+The first version accepts PDFs up to 20 MB and 300 pages. It checks
 the content type, PDF signature, safe filename length and extraction bounds.
-Encrypted, malformed and textless PDFs are rejected with actionable errors.
-Textless PDFs explicitly report that OCR is not supported instead of silently
+Encrypted and malformed PDFs are rejected with actionable errors. Pages with
+insufficient embedded text use a bounded local Poppler and Tesseract fallback;
+documents that still contain no usable text are rejected instead of silently
 creating an empty index.
 
 ## Chunking and Retrieval
@@ -213,7 +214,7 @@ at eight and at least 95 percent correct abstention on unanswerable questions.
 
 - Local model quality and latency are limited by available hardware.
 - pgvector and shared document storage add deployment and backup concerns.
-- Text-only PDF extraction does not support scanned documents.
+- OCR increases Worker CPU, memory and processing-time requirements.
 - Exact vector search will require reconsideration as chunk counts grow.
 - Local Ollama availability becomes an operational dependency for AI features.
 

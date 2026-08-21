@@ -6,7 +6,8 @@ internal sealed record OllamaEmbeddingOptions(
     Uri BaseAddress,
     string Model,
     int Dimensions,
-    int BatchSize)
+    int BatchSize,
+    double MaximumCosineDistance)
 {
     public static OllamaEmbeddingOptions FromConfiguration(
         IConfiguration configuration)
@@ -56,10 +57,17 @@ internal sealed record OllamaEmbeddingOptions(
                 16),
             1,
             64);
+        double maximumCosineDistance = Math.Clamp(
+            configuration.GetValue(
+                "KnowledgeAi:MaximumCosineDistance",
+                0.50),
+            0.10,
+            1.00);
         return new OllamaEmbeddingOptions(
             baseAddress,
             model,
             dimensions,
-            batchSize);
+            batchSize,
+            maximumCosineDistance);
     }
 }

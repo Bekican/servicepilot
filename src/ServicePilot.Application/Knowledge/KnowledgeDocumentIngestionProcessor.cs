@@ -58,7 +58,7 @@ public sealed class KnowledgeDocumentIngestionProcessor(
             {
                 throw new KnowledgeDocumentProcessingException(
                     "KnowledgeDocument.TextlessPdf",
-                    "The PDF contains no extractable text. OCR is not supported.");
+                    "The PDF contains no readable text after extraction and OCR.");
             }
 
             EmbeddingBatch embeddingBatch =

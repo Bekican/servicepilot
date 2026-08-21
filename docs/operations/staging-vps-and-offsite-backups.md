@@ -22,7 +22,7 @@ instead of assembling Compose arguments manually.
 
 ## VPS and DNS preparation
 
-Use a supported Ubuntu LTS VPS with at least 2 vCPU, 4 GiB RAM and 40 GiB disk.
+Use a supported Ubuntu LTS VPS with at least 4 vCPU, 12 GiB RAM and 60 GiB disk.
 Create a non-root `servicepilot` operator and install Docker Engine with the
 Compose plugin, Git, `curl`, `jq` and `getent`. Place the repository at
 `/opt/servicepilot/staging` and make the operator its owner.
@@ -36,7 +36,7 @@ Before deployment:
 3. Authenticate the operator to GHCR with a read-only package token.
 4. Copy `deploy/staging/.env.example` to `/etc/servicepilot/staging.env`, fill
    real values, set owner/group to the operator and run `chmod 600`.
-5. Resolve the PostgreSQL, Mailpit, Caddy and optional Collector image tags to
+5. Resolve the PostgreSQL, Ollama, Mailpit, Caddy and optional Collector image tags to
    real registry SHA-256 digests. Example repeated digests are rejected.
 
 The first staging environment uses:
@@ -77,7 +77,9 @@ Deploy with:
 
 The script checks Docker, free disk, configuration, immutable references and
 DNS; pulls the candidate images; starts PostgreSQL; runs forward-only
-migrations; rolls out API, Worker, Web and Caddy; then waits for Worker health
+migrations; downloads the two pinned Qwen model names into the local Ollama
+volume; prepares the private document volume; rolls out API, Worker, Web and
+Caddy; then waits for Worker health
 and both HTTPS readiness endpoints. A failed application rollout restores the
 previous application images. It never runs a down migration or automatically
 restores PostgreSQL, so schema changes must follow expand-and-contract.
@@ -86,6 +88,7 @@ Useful checks:
 
 ```sh
 curl --fail https://staging.example.net/ops/api/ready
+curl --fail https://staging.example.net/ops/api/knowledge
 curl --fail https://staging.example.net/ops/web/ready
 SERVICEPILOT_ENV_FILE=/etc/servicepilot/staging.env \
 SERVICEPILOT_RELEASE_FILE=.deploy-state/staging/current-release.env \
@@ -165,9 +168,13 @@ Before the first customer is admitted, all of the following must be true:
 - external TLS SMTP is configured and delivery has been verified
 - DNS, TLS renewal, firewall, SSH restriction and disk capacity are verified
 - the exact release ran successfully in staging and rollback was rehearsed
+- `/ops/api/knowledge` is healthy with `qwen3:4b` and
+  `qwen3-embedding:0.6b` present in the private Ollama volume
+- the RAG evaluation gate passes against the exact deployed model versions
 - backup retention remains at least 14 daily and 8 weekly snapshots
 
-The validator rejects production when backup, observability or external SMTP
-is missing. RAG/LLM work begins only after the staging release and operational
-drills are stable; it ships behind staging verification and feature flags, not
-as an untested change directly in production.
+The validator rejects production when backup, observability, immutable Ollama
+or external SMTP configuration is missing. Document content, questions and
+answers remain inside the deployment; the model-download network is used only
+to fetch public model weights. Restrict its outbound traffic at the host
+firewall after the model volume has been prepared.

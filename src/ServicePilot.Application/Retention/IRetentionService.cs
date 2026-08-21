@@ -9,4 +9,5 @@ public interface IRetentionService
 
 public sealed record RetentionResult(
     int DeletedInvitationCount,
-    int AnonymizedAuditLogCount);
+    int AnonymizedAuditLogCount,
+    int PurgedKnowledgeDocumentCount);

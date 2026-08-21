@@ -61,9 +61,9 @@ require_digest() {
 }
 
 for variable in DEPLOYMENT_TIER COMPOSE_PROJECT_NAME OFFSITE_BACKUP_ENABLED OBSERVABILITY_ENABLED \
-    SMTP_MODE PUBLIC_DOMAIN ACME_EMAIL DOTNET_ENVIRONMENT_NAME POSTGRES_DB \
-    POSTGRES_USER POSTGRES_PASSWORD JWT_SIGNING_KEY POSTGRES_IMAGE \
-    MAILPIT_IMAGE CADDY_IMAGE SMTP_HOST SMTP_PORT SMTP_ENABLE_SSL \
+    SMTP_MODE PUBLIC_DOMAIN ACME_EMAIL DOTNET_ENVIRONMENT_NAME POSTGRES_DB OLLAMA_BASE_URL \
+    POSTGRES_USER POSTGRES_PASSWORD JWT_SIGNING_KEY POSTGRES_IMAGE OLLAMA_IMAGE \
+    MAILPIT_IMAGE CADDY_IMAGE STORAGE_INIT_IMAGE SMTP_HOST SMTP_PORT SMTP_ENABLE_SSL \
     SMTP_FROM_ADDRESS SMTP_FROM_NAME; do
     require_value "$variable"
 done
@@ -134,8 +134,15 @@ if [ "${#database_password}" -lt 24 ] || [ "${#jwt_key}" -lt 32 ]; then
 fi
 
 require_digest POSTGRES_IMAGE "$(get_value POSTGRES_IMAGE)"
+require_digest OLLAMA_IMAGE "$(get_value OLLAMA_IMAGE)"
 require_digest MAILPIT_IMAGE "$(get_value MAILPIT_IMAGE)"
 require_digest CADDY_IMAGE "$(get_value CADDY_IMAGE)"
+require_digest STORAGE_INIT_IMAGE "$(get_value STORAGE_INIT_IMAGE)"
+
+[ "$(get_value OLLAMA_BASE_URL)" = "http://ollama:11434" ] || {
+    echo "OLLAMA_BASE_URL must use the private in-stack Ollama service." >&2
+    exit 1
+}
 
 smtp_mode="$(get_value SMTP_MODE)"
 case "$smtp_mode" in

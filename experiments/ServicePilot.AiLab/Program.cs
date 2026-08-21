@@ -51,6 +51,13 @@ try
                 embeddingModel,
                 cancellationSource.Token);
             break;
+        case "eval":
+            await RagEvaluation.RunAsync(
+                httpClient,
+                chatModel,
+                embeddingModel,
+                cancellationSource.Token);
+            break;
         case "all":
             await RunStructuredAnswerAsync(
                 httpClient,
@@ -63,7 +70,7 @@ try
             break;
         default:
             Console.Error.WriteLine(
-                "Usage: dotnet run -- [all|structured|embed]");
+                "Usage: dotnet run -- [all|structured|embed|eval]");
             Environment.ExitCode = 2;
             break;
     }

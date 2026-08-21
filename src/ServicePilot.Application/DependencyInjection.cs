@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<ReminderProcessor>();
         services.AddScoped<EmailOutboxProcessor>();
         services.AddScoped<KnowledgeDocumentService>();
+        services.AddSingleton(KnowledgeDocumentLimits.Default);
         services.AddScoped<KnowledgeAssistantService>();
 
         return services;

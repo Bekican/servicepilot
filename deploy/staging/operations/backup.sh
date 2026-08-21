@@ -10,7 +10,8 @@ require() {
 }
 
 for variable in PGHOST PGDATABASE PGUSER PGPASSWORD DEPLOYMENT_ENVIRONMENT \
-    RESTIC_REPOSITORY RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+    RESTIC_REPOSITORY RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
+    KNOWLEDGE_SOURCE_PATH; do
     require "$variable"
 done
 
@@ -51,6 +52,12 @@ archive_name="servicepilot-${DEPLOYMENT_ENVIRONMENT}-${timestamp}.dump"
 archive_path="$work_directory/$archive_name"
 metadata_path="$archive_path.metadata.json"
 checksum_path="$archive_path.sha256"
+knowledge_manifest_path="$work_directory/knowledge-files.sha256"
+
+if [ ! -d "$KNOWLEDGE_SOURCE_PATH" ]; then
+    echo "Knowledge document storage is unavailable." >&2
+    exit 1
+fi
 
 if ! restic cat config >/dev/null 2>&1; then
     if [ "${RESTIC_AUTO_INIT:-false}" != "true" ]; then
@@ -86,10 +93,20 @@ SELECT jsonb_build_object(
   'customerAddresses', (SELECT COUNT(*) FROM customer_addresses),
   'services', (SELECT COUNT(*) FROM services),
   'appointments', (SELECT COUNT(*) FROM appointments),
-  'reminders', (SELECT COUNT(*) FROM reminders)
+  'reminders', (SELECT COUNT(*) FROM reminders),
+  'knowledgeDocuments', (SELECT COUNT(*) FROM knowledge_documents),
+  'knowledgeChunks', (SELECT COUNT(*) FROM knowledge_document_chunks)
 )::text;
 SQL
 )"
+
+echo "Creating the knowledge document checksum manifest."
+: > "$knowledge_manifest_path"
+find "$KNOWLEDGE_SOURCE_PATH" -type f -print | sort | while IFS= read -r file; do
+    relative_path="${file#${KNOWLEDGE_SOURCE_PATH}/}"
+    checksum="$(sha256sum "$file" | awk '{print $1}')"
+    printf '%s  %s\n' "$checksum" "$relative_path" >> "$knowledge_manifest_path"
+done
 
 dropdb --if-exists --force "$verification_database"
 database_created=false
@@ -116,7 +133,8 @@ run_restic upload backup \
     --host "servicepilot-${DEPLOYMENT_ENVIRONMENT}" \
     --tag servicepilot \
     --tag "$DEPLOYMENT_ENVIRONMENT" \
-    "$work_directory"
+    "$work_directory" \
+    "$KNOWLEDGE_SOURCE_PATH"
 
 if [ "${RESTIC_APPLY_RETENTION:-true}" = "true" ]; then
     run_restic retention forget \

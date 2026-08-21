@@ -284,6 +284,17 @@ Run the complete gate from the repository root:
 .\scripts\verify-mvp.ps1
 ```
 
+The local knowledge assistant uses Ollama with `qwen3:4b` and
+`qwen3-embedding:0.6b`. Its explicit quality gate is:
+
+```powershell
+dotnet run --project experiments/ServicePilot.AiLab -- eval
+```
+
+Production promotion requirements, local-AI health checks and the final PDF
+smoke journey are documented in
+`docs/operations/production-release-checklist.md`.
+
 The isolated stack uses web `13000`, API `15267`, PostgreSQL `15432` and
 Mailpit `18025`. It is removed after the run, including when a test fails.
 

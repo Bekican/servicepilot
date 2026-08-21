@@ -9,6 +9,7 @@ import {
 } from "@/lib/api/problem-details";
 import { createServerApiClient, fetchServerApi } from "@/lib/api/server-client";
 import type { ProblemDetails } from "@/lib/api/types";
+import { hasCapability, requireSession } from "@/lib/auth/session";
 
 import type { KnowledgeConversationState } from "./types";
 
@@ -23,6 +24,11 @@ export async function askKnowledgeAction(
   previous: KnowledgeConversationState,
   formData: FormData,
 ): Promise<KnowledgeConversationState> {
+  const session = await requireSession();
+  if (!hasCapability(session, "UseKnowledgeAssistant")) {
+    return { ...previous, error: "Bilgi asistanını kullanma yetkiniz yok." };
+  }
+
   const question = String(formData.get("question") ?? "").trim();
   if (!question || question.length > 2000) {
     return {
@@ -69,6 +75,11 @@ export async function uploadKnowledgeDocumentAction(
   _previous: KnowledgeUploadState,
   formData: FormData,
 ): Promise<KnowledgeUploadState> {
+  const session = await requireSession();
+  if (!hasCapability(session, "ManageKnowledgeDocuments")) {
+    return { error: "Belge yükleme yetkiniz yok." };
+  }
+
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Yüklemek için bir PDF dosyası seçin." };
@@ -114,6 +125,13 @@ export async function uploadKnowledgeDocumentAction(
 }
 
 export async function retryKnowledgeDocumentAction(documentId: string) {
+  const session = await requireSession();
+  if (!hasCapability(session, "ManageKnowledgeDocuments")) {
+    redirect(
+      `/knowledge?error=${encodeURIComponent("Belge yönetme yetkiniz yok.")}`,
+    );
+  }
+
   const client = await createServerApiClient();
   const { response, error } = await client.POST(
     "/api/knowledge/documents/{id}/retry",
@@ -126,5 +144,67 @@ export async function retryKnowledgeDocumentAction(documentId: string) {
   revalidatePath("/knowledge");
   redirect(
     `/knowledge?success=${encodeURIComponent("Belge yeniden işleme sırasına alındı.")}`,
+  );
+}
+
+export async function changeKnowledgeDocumentScopeAction(
+  documentId: string,
+  formData: FormData,
+) {
+  const session = await requireSession();
+  if (!hasCapability(session, "ManageKnowledgeDocuments")) {
+    redirect(
+      `/knowledge?error=${encodeURIComponent("Belge yönetme yetkiniz yok.")}`,
+    );
+  }
+
+  const accessScope = String(formData.get("accessScope") ?? "");
+  if (!new Set(["Shared", "Operations", "Management"]).has(accessScope)) {
+    redirect(
+      `/knowledge?error=${encodeURIComponent("Geçerli bir erişim kapsamı seçin.")}`,
+    );
+  }
+
+  const response = await fetchServerApi(
+    `/api/knowledge/documents/${encodeURIComponent(documentId)}/access-scope`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accessScope }),
+    },
+  );
+  if (!response.ok) {
+    const problem = (await response.json().catch(() => undefined)) as
+      ProblemDetails | undefined;
+    redirect(`/knowledge?${problemSearchParams(problem)}`);
+  }
+
+  revalidatePath("/knowledge");
+  redirect(
+    `/knowledge?success=${encodeURIComponent("Belge erişim kapsamı güncellendi.")}`,
+  );
+}
+
+export async function deleteKnowledgeDocumentAction(documentId: string) {
+  const session = await requireSession();
+  if (!hasCapability(session, "ManageKnowledgeDocuments")) {
+    redirect(
+      `/knowledge?error=${encodeURIComponent("Belge yönetme yetkiniz yok.")}`,
+    );
+  }
+
+  const response = await fetchServerApi(
+    `/api/knowledge/documents/${encodeURIComponent(documentId)}`,
+    { method: "DELETE" },
+  );
+  if (!response.ok) {
+    const problem = (await response.json().catch(() => undefined)) as
+      ProblemDetails | undefined;
+    redirect(`/knowledge?${problemSearchParams(problem)}`);
+  }
+
+  revalidatePath("/knowledge");
+  redirect(
+    `/knowledge?success=${encodeURIComponent("Belge bilgi kaynaklarından kaldırıldı.")}`,
   );
 }

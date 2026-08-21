@@ -45,6 +45,12 @@ const translatedMessages: Record<string, string> = {
   "KnowledgeDocument.DuplicateContent": "Bu belge daha önce yüklenmiş.",
   "KnowledgeDocument.InvalidAccessScope":
     "Bu belge türü seçilen erişim kapsamıyla paylaşılamaz.",
+  "KnowledgeDocument.DocumentLimitReached":
+    "Şirketinizin belge adedi sınırına ulaşıldı. Kullanılmayan bir belgeyi kaldırın veya yöneticinizle görüşün.",
+  "KnowledgeDocument.StorageLimitReached":
+    "Şirketinizin belge depolama alanı doldu. Kullanılmayan bir belgeyi kaldırın veya yöneticinizle görüşün.",
+  "KnowledgeDocument.ConcurrentChange":
+    "Belge aynı anda başka bir işlem tarafından değiştirildi. Sayfayı yenileyip tekrar deneyin.",
 };
 
 const translatedFieldErrors: Record<string, string> = {

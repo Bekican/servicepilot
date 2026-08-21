@@ -56,6 +56,40 @@ public sealed class KnowledgeDocumentTests
         Assert.Null(document.LastErrorCode);
     }
 
+    [Fact]
+    public void ChangeAccessScope_ShouldEnforceDocumentBoundary()
+    {
+        KnowledgeDocument document = Create(
+            KnowledgeDocumentType.CustomerServiceReport,
+            KnowledgeDocumentAccessScope.Management);
+
+        Assert.Throws<ArgumentException>(() =>
+            document.ChangeAccessScope(
+                KnowledgeDocumentAccessScope.Shared,
+                UtcNow.AddMinutes(1)));
+
+        Assert.Equal(
+            KnowledgeDocumentAccessScope.Management,
+            document.AccessScope);
+    }
+
+    [Fact]
+    public void DeletedDocument_ShouldBecomeInaccessibleAndImmutable()
+    {
+        KnowledgeDocument document = Create(
+            KnowledgeDocumentType.Manual,
+            KnowledgeDocumentAccessScope.Shared);
+
+        document.MarkDeleted(UtcNow.AddMinutes(1));
+
+        Assert.Equal(KnowledgeDocumentStatus.Deleted, document.Status);
+        Assert.False(document.CanBeAccessedByRole(UserRoles.Owner));
+        Assert.Throws<InvalidOperationException>(() =>
+            document.ChangeAccessScope(
+                KnowledgeDocumentAccessScope.Management,
+                UtcNow.AddMinutes(2)));
+    }
+
     private static KnowledgeDocument Create(
         KnowledgeDocumentType type,
         KnowledgeDocumentAccessScope scope) =>

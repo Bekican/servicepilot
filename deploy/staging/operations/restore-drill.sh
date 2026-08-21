@@ -10,7 +10,8 @@ require() {
 }
 
 for variable in PGHOST PGDATABASE PGUSER PGPASSWORD DEPLOYMENT_ENVIRONMENT \
-    RESTIC_REPOSITORY RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+    RESTIC_REPOSITORY RESTIC_PASSWORD AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
+    KNOWLEDGE_SOURCE_PATH; do
     require "$variable"
 done
 
@@ -84,7 +85,9 @@ SELECT jsonb_build_object(
   'customerAddresses', (SELECT COUNT(*) FROM customer_addresses),
   'services', (SELECT COUNT(*) FROM services),
   'appointments', (SELECT COUNT(*) FROM appointments),
-  'reminders', (SELECT COUNT(*) FROM reminders)
+  'reminders', (SELECT COUNT(*) FROM reminders),
+  'knowledgeDocuments', (SELECT COUNT(*) FROM knowledge_documents),
+  'knowledgeChunks', (SELECT COUNT(*) FROM knowledge_document_chunks)
 )::text;
 SQL
 )"
@@ -95,5 +98,29 @@ if [ "$expected_snapshot" != "$actual_snapshot" ]; then
     echo "Restore completed, but schema or business-table counts differ from metadata." >&2
     exit 1
 fi
+
+knowledge_manifest_path="$(find "$work_directory" -type f -name 'knowledge-files.sha256' | head -n 1)"
+restored_knowledge_root="$work_directory${KNOWLEDGE_SOURCE_PATH:-/source/knowledge}"
+if [ -z "$knowledge_manifest_path" ] || [ ! -d "$restored_knowledge_root" ]; then
+    echo "The restored snapshot did not contain knowledge document storage." >&2
+    exit 1
+fi
+
+echo "Verifying restored knowledge document checksums."
+if [ -s "$knowledge_manifest_path" ]; then
+    (cd "$restored_knowledge_root" && sha256sum -c "$knowledge_manifest_path") >/dev/null
+fi
+
+storage_key_list="$work_directory/active-knowledge-storage-keys.txt"
+psql --dbname="$verification_database" --tuples-only --no-align --set=ON_ERROR_STOP=1 \
+    --command="SELECT storage_key FROM knowledge_documents WHERE status <> 'Deleted' ORDER BY storage_key;" \
+    > "$storage_key_list"
+while IFS= read -r storage_key; do
+    [ -z "$storage_key" ] && continue
+    if [ ! -f "$restored_knowledge_root/$storage_key" ]; then
+        echo "Restored database references a missing knowledge document." >&2
+        exit 1
+    fi
+done < "$storage_key_list"
 
 echo "Off-site restore drill passed in isolated database $verification_database."

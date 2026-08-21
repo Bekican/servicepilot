@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 using ServicePilot.Api.Authentication;
 using ServicePilot.Api.Errors;
@@ -18,6 +19,7 @@ public sealed class KnowledgeAssistantController(
     : ServicePilotControllerBase(problemFactory)
 {
     [HttpPost("ask")]
+    [EnableRateLimiting("knowledgeAsk")]
     [ProducesResponseType(
         typeof(KnowledgeAnswerResponse),
         StatusCodes.Status200OK)]

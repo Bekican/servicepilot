@@ -11,7 +11,8 @@ public sealed class KnowledgeDocumentService(
     IKnowledgeDocumentRepository repository,
     IKnowledgeDocumentStorage storage,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    KnowledgeDocumentLimits limits)
 {
     public const long MaximumPdfBytes = 20 * 1024 * 1024;
 
@@ -29,6 +30,25 @@ public sealed class KnowledgeDocumentService(
         {
             return Result<KnowledgeDocumentResponse>.Failure(
                 KnowledgeDocumentErrors.InvalidType);
+        }
+
+        KnowledgeDocumentUsage usage =
+            await repository.GetActiveUsageAsync(
+                currentUser.OrganizationId,
+                cancellationToken);
+        if (usage.DocumentCount
+            >= limits.MaximumDocumentsPerOrganization)
+        {
+            return Result<KnowledgeDocumentResponse>.Failure(
+                KnowledgeDocumentErrors.DocumentLimitReached);
+        }
+
+        if (upload.SizeBytes
+            > limits.MaximumStorageBytesPerOrganization
+                - usage.TotalSizeBytes)
+        {
+            return Result<KnowledgeDocumentResponse>.Failure(
+                KnowledgeDocumentErrors.StorageLimitReached);
         }
 
         KnowledgeDocumentAccessScope? requestedScope = null;
@@ -197,6 +217,84 @@ public sealed class KnowledgeDocumentService(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return Result<KnowledgeDocumentResponse>.Success(Map(document));
+    }
+
+    public async Task<Result<KnowledgeDocumentResponse>> ChangeAccessScopeAsync(
+        Guid documentId,
+        ChangeKnowledgeDocumentAccessScope request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!TryParseDefined(
+                request.AccessScope,
+                out KnowledgeDocumentAccessScope accessScope))
+        {
+            return Result<KnowledgeDocumentResponse>.Failure(
+                KnowledgeDocumentErrors.InvalidAccessScope);
+        }
+
+        KnowledgeDocument? document = await repository.GetByIdAsync(
+            currentUser.OrganizationId,
+            documentId,
+            cancellationToken);
+        if (document is null
+            || document.Status == KnowledgeDocumentStatus.Deleted)
+        {
+            return Result<KnowledgeDocumentResponse>.Failure(
+                KnowledgeDocumentErrors.NotFound);
+        }
+
+        try
+        {
+            document.ChangeAccessScope(
+                accessScope,
+                timeProvider.GetUtcNow());
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (ArgumentException)
+        {
+            return Result<KnowledgeDocumentResponse>.Failure(
+                KnowledgeDocumentErrors.InvalidAccessScope);
+        }
+        catch (InvalidOperationException)
+        {
+            return Result<KnowledgeDocumentResponse>.Failure(
+                KnowledgeDocumentErrors.NotFound);
+        }
+        catch (ConcurrencyViolationException)
+        {
+            return Result<KnowledgeDocumentResponse>.Failure(
+                KnowledgeDocumentErrors.ConcurrentChange);
+        }
+
+        return Result<KnowledgeDocumentResponse>.Success(Map(document));
+    }
+
+    public async Task<Result> DeleteAsync(
+        Guid documentId,
+        CancellationToken cancellationToken = default)
+    {
+        KnowledgeDocument? document = await repository.GetByIdAsync(
+            currentUser.OrganizationId,
+            documentId,
+            cancellationToken);
+        if (document is null
+            || document.Status == KnowledgeDocumentStatus.Deleted)
+        {
+            return Result.Failure(KnowledgeDocumentErrors.NotFound);
+        }
+
+        document.MarkDeleted(timeProvider.GetUtcNow());
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (ConcurrencyViolationException)
+        {
+            return Result.Failure(
+                KnowledgeDocumentErrors.ConcurrentChange);
+        }
+
+        return Result.Success();
     }
 
     private static Error? Validate(UploadKnowledgeDocument upload)

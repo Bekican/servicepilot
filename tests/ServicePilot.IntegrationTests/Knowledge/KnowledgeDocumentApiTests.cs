@@ -340,12 +340,80 @@ public sealed class KnowledgeDocumentApiTests
             "fake-embedding-model",
             1024,
             12);
+        float[] unrelatedEmbedding = new float[1024];
+        unrelatedEmbedding[1] = 1;
+        var unrelated = await repository.SearchAsync(
+            organizationId,
+            [KnowledgeDocumentAccessScope.Operations],
+            unrelatedEmbedding,
+            "fake-embedding-model",
+            1024,
+            12);
 
         Assert.Empty(sharedOnly);
         Assert.NotEmpty(operations);
+        Assert.Empty(unrelated);
         Assert.All(
             operations,
             chunk => Assert.Equal(uploaded.Id, chunk.DocumentId));
+    }
+
+    [Fact]
+    public async Task Owner_ShouldChangeScopeAndSoftDeleteDocument()
+    {
+        AuthenticationTokenResponse owner = await RegisterOwnerAsync();
+        HttpResponseMessage created = await UploadAsync(
+            owner.AccessToken,
+            $"{Guid.NewGuid():N}.pdf",
+            "Manual",
+            "Shared",
+            CreateTextPdf());
+        KnowledgeDocumentResponse uploaded =
+            Assert.IsType<KnowledgeDocumentResponse>(
+                await created.Content.ReadFromJsonAsync<
+                    KnowledgeDocumentResponse>());
+
+        using HttpRequestMessage scopeRequest = Authorized(
+            HttpMethod.Patch,
+            $"/api/knowledge/documents/{uploaded.Id}/access-scope",
+            owner.AccessToken);
+        scopeRequest.Content = JsonContent.Create(
+            new ChangeKnowledgeDocumentAccessScopeRequest("Management"));
+        HttpResponseMessage changed = await _client.SendAsync(scopeRequest);
+        changed.EnsureSuccessStatusCode();
+        KnowledgeDocumentResponse scoped =
+            Assert.IsType<KnowledgeDocumentResponse>(
+                await changed.Content.ReadFromJsonAsync<
+                    KnowledgeDocumentResponse>());
+        Assert.Equal("Management", scoped.AccessScope);
+
+        using HttpRequestMessage deleteRequest = Authorized(
+            HttpMethod.Delete,
+            $"/api/knowledge/documents/{uploaded.Id}",
+            owner.AccessToken);
+        HttpResponseMessage deleted = await _client.SendAsync(deleteRequest);
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+
+        using HttpRequestMessage openRequest = Authorized(
+            HttpMethod.Get,
+            $"/api/knowledge/documents/{uploaded.Id}/content",
+            owner.AccessToken);
+        HttpResponseMessage opened = await _client.SendAsync(openRequest);
+        Assert.Equal(HttpStatusCode.NotFound, opened.StatusCode);
+
+        using HttpRequestMessage listRequest = Authorized(
+            HttpMethod.Get,
+            "/api/knowledge/documents",
+            owner.AccessToken);
+        HttpResponseMessage listed = await _client.SendAsync(listRequest);
+        listed.EnsureSuccessStatusCode();
+        IReadOnlyList<KnowledgeDocumentResponse>? documents =
+            await listed.Content.ReadFromJsonAsync<
+                IReadOnlyList<KnowledgeDocumentResponse>>();
+        Assert.DoesNotContain(
+            Assert.IsAssignableFrom<
+                IReadOnlyList<KnowledgeDocumentResponse>>(documents),
+            document => document.Id == uploaded.Id);
     }
 
     [Fact]

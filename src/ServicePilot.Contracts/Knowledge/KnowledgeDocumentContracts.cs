@@ -15,6 +15,9 @@ public sealed record KnowledgeDocumentResponse(
 
 public sealed record AskKnowledgeRequest(string Question);
 
+public sealed record ChangeKnowledgeDocumentAccessScopeRequest(
+    string AccessScope);
+
 public sealed record KnowledgeAnswerResponse(
     string Answer,
     bool InsufficientEvidence,

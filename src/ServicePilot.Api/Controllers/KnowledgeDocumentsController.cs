@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 using ServicePilot.Api.Authentication;
 using ServicePilot.Api.Errors;
@@ -21,6 +22,7 @@ public sealed class KnowledgeDocumentsController(
 {
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.KnowledgeManage)]
+    [EnableRateLimiting("knowledgeUpload")]
     [RequestSizeLimit(KnowledgeDocumentService.MaximumPdfBytes + 65536)]
     [ProducesResponseType(
         typeof(ContractResponse),
@@ -84,6 +86,39 @@ public sealed class KnowledgeDocumentsController(
             await service.RetryAsync(id, cancellationToken);
         return result.IsSuccess
             ? Ok(Map(result.Value))
+            : ToProblem(result.Error);
+    }
+
+    [HttpPatch("{id:guid}/access-scope")]
+    [Authorize(Policy = AuthorizationPolicies.KnowledgeManage)]
+    public async Task<IActionResult> ChangeAccessScope(
+        Guid id,
+        ServicePilot.Contracts.Knowledge.
+            ChangeKnowledgeDocumentAccessScopeRequest request,
+        CancellationToken cancellationToken)
+    {
+        Result<KnowledgeDocumentResponse> result =
+            await service.ChangeAccessScopeAsync(
+                id,
+                new ChangeKnowledgeDocumentAccessScope(
+                    request.AccessScope),
+                cancellationToken);
+        return result.IsSuccess
+            ? Ok(Map(result.Value))
+            : ToProblem(result.Error);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [Authorize(Policy = AuthorizationPolicies.KnowledgeManage)]
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        Result result = await service.DeleteAsync(
+            id,
+            cancellationToken);
+        return result.IsSuccess
+            ? NoContent()
             : ToProblem(result.Error);
     }
 

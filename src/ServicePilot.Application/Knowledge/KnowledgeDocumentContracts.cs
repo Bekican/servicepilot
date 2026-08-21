@@ -25,3 +25,6 @@ public sealed record KnowledgeDocumentDownload(
     Stream Content,
     string ContentType,
     string OriginalFileName);
+
+public sealed record ChangeKnowledgeDocumentAccessScope(
+    string AccessScope);

@@ -58,6 +58,12 @@ public sealed class ServicePilotApiFactory
             "RateLimiting:PasswordResetPermitLimit",
             "20");
         builder.UseSetting(
+            "RateLimiting:KnowledgeAskPermitLimit",
+            "1000");
+        builder.UseSetting(
+            "RateLimiting:KnowledgeUploadPermitLimit",
+            "1000");
+        builder.UseSetting(
             "KnowledgeStorage:RootPath",
             _knowledgeStorageRoot);
 

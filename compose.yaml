@@ -33,11 +33,22 @@ services:
   knowledge-storage-init:
     image: alpine:3.21
     restart: "no"
-    user: root
+    user: "0:0"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
     command:
       - sh
-      - -c
-      - chown -R 1654:1654 /var/lib/servicepilot/knowledge
+      - -ec
+      - >-
+        chown 1654:1654 /var/lib/servicepilot/knowledge &&
+        chmod 0750 /var/lib/servicepilot/knowledge
     volumes:
       - servicepilot-knowledge-data:/var/lib/servicepilot/knowledge
 
@@ -104,6 +115,7 @@ services:
       KnowledgeStorage__RootPath: /var/lib/servicepilot/knowledge
       KnowledgeAi__OllamaBaseUrl: http://host.docker.internal:11434
       KnowledgeAi__EmbeddingModel: qwen3-embedding:0.6b
+      KnowledgeOcr__Enabled: "true"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

@@ -8,7 +8,8 @@ using ServicePilot.Domain.Knowledge;
 namespace ServicePilot.Infrastructure.Knowledge;
 
 internal sealed class KnowledgeRetrievalRepository(
-    NpgsqlDataSource dataSource)
+    NpgsqlDataSource dataSource,
+    OllamaEmbeddingOptions options)
     : IKnowledgeRetrievalRepository
 {
     public async Task<IReadOnlyList<RetrievedKnowledgeChunk>> SearchAsync(
@@ -46,6 +47,7 @@ internal sealed class KnowledgeRetrievalRepository(
               AND d.access_scope = ANY($3)
               AND c.embedding_model = $4
               AND c.embedding_dimensions = $5
+              AND c.embedding <=> $1 <= $7
             ORDER BY c.embedding <=> $1, c.id
             LIMIT $6
             """;
@@ -57,6 +59,7 @@ internal sealed class KnowledgeRetrievalRepository(
         command.Parameters.AddWithValue(embeddingModel);
         command.Parameters.AddWithValue(embeddingDimensions);
         command.Parameters.AddWithValue(Math.Clamp(candidateCount, 1, 50));
+        command.Parameters.AddWithValue(options.MaximumCosineDistance);
 
         List<RetrievedKnowledgeChunk> results = [];
         await using NpgsqlDataReader reader =

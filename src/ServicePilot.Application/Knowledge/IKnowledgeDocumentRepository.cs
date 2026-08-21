@@ -19,6 +19,10 @@ public interface IKnowledgeDocumentRepository
         string checksumSha256,
         CancellationToken cancellationToken = default);
 
+    Task<KnowledgeDocumentUsage> GetActiveUsageAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<KnowledgeDocument>> ClaimPendingAsync(
         DateTimeOffset nowUtc,
         DateTimeOffset staleBeforeUtc,
@@ -27,3 +31,7 @@ public interface IKnowledgeDocumentRepository
 
     void Add(KnowledgeDocument document);
 }
+
+public sealed record KnowledgeDocumentUsage(
+    int DocumentCount,
+    long TotalSizeBytes);

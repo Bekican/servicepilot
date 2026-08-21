@@ -83,7 +83,7 @@ export function KnowledgeUploadDialog() {
               type="file"
             />
             <p className="text-muted-foreground text-xs">
-              En fazla 20 MB. Metin içeren PDF&apos;ler desteklenir.
+              En fazla 20 MB. Metin içeren ve taranmış PDF&apos;ler desteklenir.
             </p>
             <FieldError id="knowledge-file-error" />
           </div>

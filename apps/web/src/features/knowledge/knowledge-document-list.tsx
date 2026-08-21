@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { retryKnowledgeDocumentAction } from "@/features/knowledge/actions";
+import { KnowledgeDocumentActions } from "@/features/knowledge/knowledge-document-actions";
 import type { KnowledgeDocument } from "@/lib/api/types";
 import { formatDate } from "@/lib/date";
 
@@ -128,6 +129,14 @@ export function KnowledgeDocumentList({
                   </form>
                 ) : null}
               </div>
+              {canManage ? (
+                <KnowledgeDocumentActions
+                  accessScope={document.accessScope}
+                  documentId={document.id}
+                  documentName={document.originalFileName}
+                  documentType={document.documentType}
+                />
+              ) : null}
             </div>
           </div>
         </article>

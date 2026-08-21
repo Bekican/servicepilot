@@ -45,4 +45,16 @@ public static class KnowledgeDocumentErrors
     public static readonly Error InvalidRetry = new(
         "KnowledgeDocument.InvalidRetry",
         "Only failed documents can be retried.");
+
+    public static readonly Error DocumentLimitReached = new(
+        "KnowledgeDocument.DocumentLimitReached",
+        "The organization's document limit has been reached.");
+
+    public static readonly Error StorageLimitReached = new(
+        "KnowledgeDocument.StorageLimitReached",
+        "The organization's document storage limit has been reached.");
+
+    public static readonly Error ConcurrentChange = new(
+        "KnowledgeDocument.ConcurrentChange",
+        "The document was changed by another operation. Refresh and try again.");
 }

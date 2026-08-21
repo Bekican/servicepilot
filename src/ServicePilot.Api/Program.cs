@@ -109,7 +109,19 @@ builder.Services
     .AddHealthChecks()
     .AddCheck<DatabaseReadinessHealthCheck>(
         "database",
-        tags: ["ready"]);
+        tags: ["ready"])
+    .AddCheck<KnowledgeReadinessHealthCheck>(
+        "knowledge",
+        tags: ["knowledge"]);
+builder.Services.AddHttpClient(
+    "knowledge-health",
+    client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["KnowledgeAi:OllamaBaseUrl"]
+                ?? "http://localhost:11434");
+        client.Timeout = TimeSpan.FromSeconds(5);
+    });
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode =
@@ -171,6 +183,34 @@ builder.Services.AddRateLimiter(options =>
                             + "InvitationPermitLimit",
                             30),
                     Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
+                }));
+    options.AddPolicy(
+        "knowledgeAsk",
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                GetKnowledgePartition(httpContext, includeUser: true),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = builder.Configuration.GetValue(
+                        "RateLimiting:KnowledgeAskPermitLimit",
+                        30),
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
+                }));
+    options.AddPolicy(
+        "knowledgeUpload",
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                GetKnowledgePartition(httpContext, includeUser: false),
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = builder.Configuration.GetValue(
+                        "RateLimiting:KnowledgeUploadPermitLimit",
+                        10),
+                    Window = TimeSpan.FromHours(1),
                     QueueLimit = 0,
                     AutoReplenishment = true
                 }));
@@ -358,11 +398,26 @@ app.Use(async (context, next) =>
         "no-referrer");
     await next(context);
 });
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapGet(
+        "/",
+        () => Results.Ok(new
+        {
+            service = "ServicePilot.Api",
+            status = "running",
+            health = new
+            {
+                live = "/health/live",
+                ready = "/health/ready",
+                knowledge = "/health/knowledge"
+            }
+        }))
+    .AllowAnonymous()
+    .ExcludeFromDescription();
 app.MapHealthChecks(
     "/health/live",
     new HealthCheckOptions
@@ -376,6 +431,13 @@ app.MapHealthChecks(
         Predicate = registration =>
             registration.Tags.Contains("ready")
     });
+app.MapHealthChecks(
+    "/health/knowledge",
+    new HealthCheckOptions
+    {
+        Predicate = registration =>
+            registration.Tags.Contains("knowledge")
+    });
 
 app.Run();
 
@@ -385,6 +447,25 @@ static string GetClientPartition(
     return httpContext.Connection.RemoteIpAddress?
         .ToString()
         ?? "unknown";
+}
+
+static string GetKnowledgePartition(
+    HttpContext httpContext,
+    bool includeUser)
+{
+    string? organizationId = httpContext.User.FindFirst(
+        AuthenticationClaimNames.OrganizationId)?.Value;
+    string? userId = httpContext.User.FindFirst(
+        JwtRegisteredClaimNames.Sub)?.Value;
+
+    if (string.IsNullOrWhiteSpace(organizationId))
+    {
+        return $"anonymous:{GetClientPartition(httpContext)}";
+    }
+
+    return includeUser && !string.IsNullOrWhiteSpace(userId)
+        ? $"organization:{organizationId}:user:{userId}"
+        : $"organization:{organizationId}";
 }
 
 static void AddCapabilityPolicy(

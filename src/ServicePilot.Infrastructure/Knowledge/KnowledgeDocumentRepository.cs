@@ -45,6 +45,29 @@ internal sealed class KnowledgeDocumentRepository(
                 && document.Status != KnowledgeDocumentStatus.Deleted,
             cancellationToken);
 
+    public async Task<KnowledgeDocumentUsage> GetActiveUsageAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<KnowledgeDocument> activeDocuments =
+            dbContext.KnowledgeDocuments
+                .AsNoTracking()
+                .Where(document =>
+                    document.OrganizationId == organizationId
+                    && document.Status != KnowledgeDocumentStatus.Deleted);
+
+        int documentCount = await activeDocuments.CountAsync(
+            cancellationToken);
+        long totalSizeBytes = await activeDocuments
+            .SumAsync(document => (long?)document.SizeBytes,
+                cancellationToken)
+            ?? 0;
+
+        return new KnowledgeDocumentUsage(
+            documentCount,
+            totalSizeBytes);
+    }
+
     public async Task<IReadOnlyList<KnowledgeDocument>> ClaimPendingAsync(
         DateTimeOffset nowUtc,
         DateTimeOffset staleBeforeUtc,

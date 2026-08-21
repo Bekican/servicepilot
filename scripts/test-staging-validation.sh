@@ -17,7 +17,7 @@ prepare_staging() {
         -e 's/operations@example\.com/operations@servicepilot.test/g' \
         -e 's/replace-with-a-long-random-database-password/database-password-with-more-than-24-characters/g' \
         -e 's/replace-with-at-least-32-random-characters/jwt-signing-key-with-more-than-32-characters/g' \
-        -e "s/[a-e]\{64\}/$digest/g" \
+        -e "s/[a-f]\{64\}/$digest/g" \
         "$environment_file" "$release_file"
     chmod 600 "$environment_file" "$release_file"
 }
